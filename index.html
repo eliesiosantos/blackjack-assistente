@@ -250,6 +250,10 @@
     .guide{display:none}
     .pcard .gr{font-size:15px}.pcard .gs{font-size:18px}
   }
+
+  .pc.pcard,.htab .pc{background:linear-gradient(160deg,#fff6d6,#f6e7b4)!important;box-shadow:0 0 0 2px #e0b84a,0 3px 0 rgba(0,0,0,.18),0 6px 12px rgba(0,0,0,.22)!important}
+  .order .note{color:#6b3d00}
+  .order:has(.note){background:#fff1c2;color:#6b3d00;border:2px solid #e0b84a;border-radius:14px;width:auto}
 </style>
 </head>
 <body>
@@ -430,32 +434,54 @@ function autoRes(){
   return null;
 }
 function dealerUndo(){dealerExtra.pop();dealerRes=autoRes();render()}
-function undo(){if(!H().length&&hands.length>1){hands.splice(active,1);active=Math.max(0,active-1)}else H().pop();render()}
-function clearHand(){hands=[[]];active=0;splitEnd=-1;render()}
+function undo(){notice="";roundDone=false;if(H().dbl&&H().length<=3)H().dbl=false;if(!H().length&&hands.length>1){hands.splice(active,1);active=Math.max(0,active-1)}else H().pop();render()}
+function clearHand(){hands=[[]];active=0;splitEnd=-1;notice="";roundDone=false;render()}
 function removeAt(i){H().splice(i,1);render()}
-function selectHand(i){active=i;render()}
+function selectHand(i){active=i;notice="";render()}
 /* Após dividir: o dealer dá 1 carta para cada mão (Mão 1, Mão 2...).
    Depois a decisão começa pela última mão e volta até a Mão 1. */
 const filling=()=>hands.length>1&&hands.some(h=>h.length===1);
 const firstToFill=()=>hands.findIndex(h=>h.length===1);
-function isDone(h){const c=advise(h,true).cls;return h.length>=2&&(c==="c-stand"||c==="c-bust")}
+function isDone(h){if(h.length<2)return false;if(h.dbl&&h.length>=3)return true;if(total(h).t>=21)return true;const c=advise(h,true).cls;return c==="c-stand"||c==="c-bust"}
+let notice="", roundDone=false;
+function doneMsg(h,i){const t=total(h).t;
+  if(t>21) return `Mão ${i+1} estourou (${t})`;
+  if(h.dbl) return `Mão ${i+1} dobrou e fechou com ${t}`;
+  if(t===21) return `Mão ${i+1} fez 21`;
+  return `Mão ${i+1}: aperte <b>STAND</b> ✔ (${t})`;}
+/* Avança sozinho: última mão → ... → Mão 1 → fim da rodada */
+function advance(){
+  if(filling()) return;
+  let msgs=[];
+  while(isDone(H())){
+    if(hands.length>1) msgs.push(doneMsg(H(),active));
+    if(active>0){active--;continue}
+    roundDone=true;break;
+  }
+  if(hands.length>1&&msgs.length) notice=msgs.join(" · ")+(roundDone?" — <b>marque o resultado do dealer</b>":` — agora é a <b>Mão ${active+1}</b>`);
+  if(roundDone) setTimeout(()=>goTo("pEnd"),hands.length>1?900:700);
+}
 function nextToPlay(from=hands.length){for(let i=from-1;i>=0;i--) if(!isDone(hands[i])&&hands[i].length>=2) return i;
   for(let i=hands.length-1;i>=0;i--) if(!isDone(hands[i])&&hands[i].length>=2) return i; return -1}
 function addCard(r){
-  const wasFilling=filling();
-  H().push(r);
+  const wasFilling=filling(), h=H();
+  if(!wasFilling&&h.length===2&&advise(h,hands.length>1).cls==="c-double") h.dbl=true; // recebeu a carta do dobrar
+  if(!wasFilling) notice="";
+  roundDone=false;
+  h.push(r);
   if(wasFilling){
     if(filling()) active=firstToFill();      // próxima mão que ainda espera a 2ª carta
     else active=splitEnd>=0?splitEnd:hands.length-1; // terminou a distribuição: começa pela última mão dividida
   }
+  advance();
   render();
 }
 function doSplit(){
   const h=H(); if(h.length!==2||h[0]!==h[1]) return;
-  hands.splice(active,1,[h[0]],[h[1]]); splitEnd=active+1; active=firstToFill(); render();
+  hands.splice(active,1,[h[0]],[h[1]]); splitEnd=active+1; active=firstToFill(); notice=""; render();
 }
 let splitEnd=-1;
-function nextHand(){if(active>0){active--;render()}}
+function nextHand(){if(active>0){active--;notice="";render()}}
 
 function advise(hand=H(),split=hands.length>1){
   if(!dealer&&!hand.length) return {cls:"",act:"Comece pela carta do dealer",why:"Escolha a carta que o dealer está mostrando e depois adicione as suas cartas."};
@@ -502,10 +528,9 @@ function render(){
   let chips="";
   if(dealer){const k=caseOf(dealer);chips+=`<span class="chip">Dealer: ${dealer} · Caso ${k}</span>`}
   if(hand.length){const {t,soft}=total(hand);chips+=`<span class="tbadge">${t}</span><span class="chip">Seu total${soft&&t<21?" (Ás = 11)":""}</span><span class="chip">${hand.length} carta${hand.length>1?"s":""}</span>`}
-  const order=hands.length>1?(filling()?`Distribuindo: próxima carta vai para a <b>Mão ${firstToFill()+1}</b>`:`Ordem de decisão: ${hands.map((_,i)=>"Mão "+(i+1)).reverse().join(" → ")}`):"";
+  const order=notice?`<span class="note">${notice}</span>`:hands.length>1?(filling()?`👉 Toque na <b>2ª carta da Mão ${firstToFill()+1}</b>`:`Ordem de decisão: ${hands.map((_,i)=>"Mão "+(i+1)).reverse().join(" → ")}`):"";
   const tag=hands.length>1?`<span class="chip" style="background:#f1e7ff;color:#5a2a91">Mão ${active+1} de ${hands.length}</span>`:"";
-  const nxt=active-1;
-  const done=hands.length>1&&!filling()&&active>0&&H().length>=2&&!a.split;
+  const nxt=active-1, done=false;
   r.innerHTML=(order?`<div class="order">${order}</div>`:"")+`${chips||tag?`<div class="meta">${tag}${chips}</div>`:""}${a.cls==="c-bust"?`<div class="bust">ESTOUROU 💥</div>`:a.cls?gameButtons(a.cls):""}<div class="action">${a.act}</div><p class="why">${a.why}</p>`
     +(a.split?`<button class="btn" style="margin-top:10px" onclick="doSplit()">Dividi as cartas ✂️</button>`:"")
     +(done?`<button class="btn" style="margin-top:10px;margin-left:6px" onclick="nextHand()">Ir para a Mão ${nxt+1} ▸</button>`:"");
@@ -624,7 +649,7 @@ function newRound(){
   if(dealer||dealerRes){rounds.push({c:dealer?caseOf(dealer):null,r:dealerRes,np:$("newPlayer").checked});rounds=rounds.slice(-15);save();}
   if(oc.length){stats.push({t:Date.now(),c:dealer?caseOf(dealer):null,r:dealerRes,o:oc,f:followed,bet:+$("betIn").value||0,d:$("dbl").checked});saveStats();}
   myBJ=false;setFollow(true);$("dbl").checked=false;
-  dealer=null;hands=[[]];active=0;splitEnd=-1;dealerExtra=[];dealerRes=null;$("newPlayer").checked=false;
+  dealer=null;hands=[[]];active=0;splitEnd=-1;notice="";roundDone=false;dealerExtra=[];dealerRes=null;$("newPlayer").checked=false;
   $("regHint").textContent="Rodada registrada.";render();
   const ev=evaluate();
   if(ev.cls==="v-go"&&alertKey!==ev.v){alertKey=ev.v;showAlert(ev)}
