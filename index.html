@@ -254,6 +254,14 @@
   .pc.pcard,.htab .pc{background:linear-gradient(160deg,#fff6d6,#f6e7b4)!important;box-shadow:0 0 0 2px #e0b84a,0 3px 0 rgba(0,0,0,.18),0 6px 12px rgba(0,0,0,.22)!important}
   .order .note{color:#6b3d00}
   .order:has(.note){background:#fff1c2;color:#6b3d00;border:2px solid #e0b84a;border-radius:14px;width:auto}
+  .toast{position:fixed;left:50%;top:10px;transform:translate(-50%,-140%);z-index:40;width:min(560px,calc(100% - 20px));background:#1d2a12;color:#fff;border:2px solid #7ee07c;border-radius:16px;padding:10px 12px;display:flex;align-items:center;gap:10px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);transition:transform .25s}
+  .toast.show{transform:translate(-50%,0)}
+  .toast span{flex:1;line-height:1.4}
+  .toast .small{border-color:#fff;white-space:nowrap}
+  .cfg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+  @media(max-width:520px){.cfg{grid-template-columns:repeat(2,1fr)}}
+  .cfg label{font-size:11.5px;color:#cfe3d6;display:flex;flex-direction:column;gap:3px}
+  .cfg input{width:100%;padding:6px 10px;font-size:14px}
 </style>
 </head>
 <body>
@@ -272,8 +280,8 @@
         <li><b>Suas cartas:</b> toque nas 2 cartas que abriram para você. Se pedir mais carta, toque na nova também.</li>
         <li><b>Dividiu?</b> Quando aparecer <b>Dividir</b>, toque em <b>Dividi as cartas ✂️</b>. Depois toque nas cartas que o dealer distribuiu, na ordem: a 1ª vai para a Mão 1, a 2ª para a Mão 2. Em seguida o programa mostra primeiro a decisão da <b>última mão</b> (Mão 2) e depois volta para a Mão 1, igual ao jogo. Se precisar, toque na aba de uma mão para corrigir.</li>
         <li><b>Sua decisão:</b> leia a recomendação (Pedir, Parar, Dobrar ou Dividir). Ela também aparece na barra fixa no rodapé.</li>
-        <li><b>Fim da rodada:</b> marque o resultado final do dealer (17 a 21, BJ ou Estourou), marque se entrou jogador novo e toque em <b>Registrar rodada</b>.</li>
-        <li><b>Seu resultado:</b> é calculado sozinho comparando suas cartas com o resultado do dealer (uma linha por mão se dividiu). Só toque em <b>Fiz Blackjack</b> quando o jogo encerrar antes de você marcar as cartas. Diga se seguiu a recomendação e, se quiser, o valor apostado. O painel <b>Minhas estatísticas</b> mostra sua taxa de vitória seguindo e sem seguir o programa.</li>
+        <li><b>Fim da rodada:</b> se entrou jogador novo, marque a caixa; depois toque no resultado final do dealer (17 a 21, BJ ou Estourou). A rodada é registrada sozinha. Se não viu o resultado, use <b>Não vi o resultado do dealer</b>.</li>
+        <li><b>Seu resultado:</b> é calculado sozinho comparando suas cartas com o resultado do dealer (uma linha por mão se dividiu). Só toque em <b>Fiz Blackjack</b> quando o jogo encerrar antes de você marcar as cartas. Marque se não seguiu a recomendação. Ao tocar no <b>resultado do dealer</b> a rodada é registrada sozinha (aparece <b>Desfazer</b> por 6 segundos, caso erre). O painel <b>Minhas estatísticas</b> mostra vitórias, <b>pontos ganhos</b> e <b>fichas</b>. Pontos padrão: perda ou empate = 1× a aposta, vitória = 3×, blackjack = 5× (ajustável em ⚙️ Regras de pontos).</li>
         <li><b>Controle de mesa:</b> depois de 3 rodadas, o programa diz se você deve ficar, trocar de mesa, trocar de servidor ou fazer uma pausa. Quando trocar, toque em <b>Troquei de mesa</b> ou <b>Troquei de servidor</b>.</li>
       </ol>
 
@@ -330,20 +338,17 @@
 
   <div class="panel" id="pEnd">
     <div class="label">4 · Fim da rodada: controle de mesa</div>
-    <div style="font-size:13px;color:#cfe3d6;margin-bottom:8px">Resultado final do dealer nesta rodada:</div>
-    <div class="res" id="resKeys"></div>
-    <div style="font-size:13px;color:#cfe3d6;margin:14px 0 8px">Seu resultado (calculado automaticamente):</div>
+    <div style="font-size:13px;color:#cfe3d6;margin-bottom:8px">Seu resultado (calculado automaticamente):</div>
     <div id="outcomeArea"></div>
     <div class="row" style="margin-top:10px;gap:14px">
       <div class="seg" id="followSeg"><span>Seguiu a recomendação?</span><button data-v="1" class="on" onclick="setFollow(true)">Sim</button><button data-v="0" onclick="setFollow(false)">Não</button></div>
-      <label style="font-size:13px;display:flex;align-items:center;gap:6px">Aposta: <input id="betIn" type="number" min="0" placeholder="opcional" style="width:100px;padding:6px 10px;font-size:14px"></label>
-      <label class="chk" style="margin:0"><input type="checkbox" id="dbl"> Dobrei</label>
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px">Aposta: <input id="betIn" type="number" min="1" style="width:80px;padding:6px 10px;font-size:14px"></label>
     </div>
     <label class="chk"><input type="checkbox" id="newPlayer"> Entrou um jogador novo na mesa nesta rodada</label>
-    <div class="row" style="margin-top:10px">
-      <button class="btn" onclick="newRound()">Registrar rodada ▸</button>
-      <span style="font-size:12.5px;color:#cfe3d6" id="regHint">Salva o dealer, o seu resultado e limpa a mesa.</span>
-    </div>
+    <div style="font-size:13px;color:#fff7d1;margin:14px 0 8px;font-weight:600">Resultado final do dealer <span style="font-weight:400;color:#cfe3d6">(registra a rodada sozinho)</span>:</div>
+    <div class="res" id="resKeys"></div>
+    <div class="row" style="margin-top:8px"><button class="small" onclick="notSeen()">Não vi o resultado do dealer</button>
+      <span style="font-size:12.5px;color:#cfe3d6" id="regHint"></span></div>
     <div class="hist" id="hist"></div>
     <div style="font-size:11.5px;color:#b9d3c3;margin-top:6px">Cores: <b style="color:#5fd39a">verde</b> = dealer estourou · <b style="color:#e7c25a">amarelo</b> = 17-18 · <b style="color:#ff8a8a">vermelho</b> = 19+ ou BJ · C1/C2/C3 = carta aberta · + = jogador novo</div>
     <div class="verdict" id="verdict"></div>
@@ -392,6 +397,7 @@
   </footer>
 </div>
 <div class="sticky" id="sticky" onclick="goTo('result','center')"></div>
+<div class="toast" id="toast"><span id="toastTxt"></span><button class="small" onclick="undoRegister()">Desfazer</button></div>
 <div class="modal" id="alertModal" role="alertdialog" aria-modal="true" aria-labelledby="alertTitle" style="display:none">
   <div class="mbox" id="alertBox">
     <div class="micon" id="alertIcon">🔄</div>
@@ -548,7 +554,7 @@ if(!Array.isArray(rounds))rounds=[];
 rounds=rounds.map(h=>typeof h==="number"?{c:h,r:null,np:false}:h).filter(h=>h&&typeof h==="object");
 if(!swaps||typeof swaps!=="object")swaps={mesa:0,servidor:0};
 
-(function(){const el=$("resKeys");RESULTS.forEach(r=>{const b=document.createElement("button");b.className="key";b.textContent=r;b.dataset.r=r;b.onclick=()=>{dealerRes=dealerRes===r?null:r;render()};el.appendChild(b)})})();
+(function(){const el=$("resKeys");RESULTS.forEach(r=>{const b=document.createElement("button");b.className="key";b.textContent=r;b.dataset.r=r;b.onclick=()=>{dealerRes=r;render();autoRegister()};el.appendChild(b)})})();
 
 const resClass=r=>r===null?"r-none":r==="Estourou"?"r-bust":(r==="BJ"||+r>=19)?"r-strong":"r-mid";
 const strong=r=>r==="BJ"||(r!==null&&r!=="Estourou"&&+r>=19);
@@ -560,7 +566,7 @@ let followed=true, stats=[], recBet=null, resetArm=false;
 try{const x=JSON.parse(localStorage.getItem("bj_stats")||"[]");if(Array.isArray(x))stats=x}catch(e){}
 const OC=[["w","Ganhei"],["bj","Blackjack"],["p","Empate"],["l","Perdi"]];
 let myBJ=false;
-function toggleBJ(){myBJ=!myBJ;renderOutcome()}
+function toggleBJ(){myBJ=true;renderOutcome();autoRegister(true)}
 /* calcula o resultado de cada mão a partir das cartas e do resultado do dealer */
 function autoOutcome(h,i){
   const n=hands.length, natural=n===1&&h.length===2&&total(h).t===21;
@@ -583,14 +589,35 @@ function renderOutcome(){
 }
 function setFollow(v){followed=v;document.querySelectorAll("#followSeg button").forEach(b=>b.classList.toggle("on",(b.dataset.v==="1")===v))}
 function saveStats(){try{localStorage.setItem("bj_stats",JSON.stringify(stats))}catch(e){}}
+/* ---------- Pontos do jogo (configurável) ---------- */
+const DEFCFG={start:100,bet:20,mL:1,mP:1,mW:3,m21:3,mBJ:5};
+let cfg={...DEFCFG};try{const c=JSON.parse(localStorage.getItem("bj_cfg")||"null");if(c)cfg={...DEFCFG,...c}}catch(e){}
+try{document.getElementById("betIn").value=cfg.bet}catch(e){}
+function saveCfg(){try{localStorage.setItem("bj_cfg",JSON.stringify(cfg))}catch(e){}}
+function setCfg(k,v){v=+v;if(!(v>=0))return;cfg[k]=v;saveCfg();if(k==="bet")$("betIn").value=v;renderStats()}
+function points(o,bet,dbl,t){const b=(bet||cfg.bet)*(dbl?2:1);if(!o)return 0;
+  return o==="bj"?b*cfg.mBJ:o==="w"?b*(t===21?cfg.m21:cfg.mW):o==="p"?b*cfg.mP:b*cfg.mL}
 function profit(o,bet,dbl){if(!bet)return 0;const m=dbl?2:1;return o==="w"?bet*m:o==="bj"?bet*1.5:o==="l"?-bet*m:0}
 function pct(a,b){return b?Math.round(a/b*100):null}
 function renderStats(){
   const el=$("stats"); const hs=[];
   stats.forEach(r=>r.o.forEach(o=>hs.push({...r,o})));
-  if(!hs.length){el.innerHTML='<span class="empty" style="font-size:13px">Nenhum resultado registrado ainda. No fim de cada rodada marque Ganhei, Perdi ou Empate e toque em Registrar rodada.</span>';return}
+  const cfgBox=`<details class="cmp" style="margin-top:12px"><summary style="font:700 14px Fredoka,sans-serif">⚙️ Regras de pontos e fichas</summary>
+    <div class="cfg">
+      <label>Fichas iniciais<input type="number" min="0" value="${cfg.start}" onchange="setCfg('start',this.value)"></label>
+      <label>Aposta padrão<input type="number" min="1" value="${cfg.bet}" onchange="setCfg('bet',this.value)"></label>
+      <label>Perda (× aposta)<input type="number" min="0" step="0.5" value="${cfg.mL}" onchange="setCfg('mL',this.value)"></label>
+      <label>Empate (× aposta)<input type="number" min="0" step="0.5" value="${cfg.mP}" onchange="setCfg('mP',this.value)"></label>
+      <label>Vitória (× aposta)<input type="number" min="0" step="0.5" value="${cfg.mW}" onchange="setCfg('mW',this.value)"></label>
+      <label>Vitória com 21 (× aposta)<input type="number" min="0" step="0.5" value="${cfg.m21}" onchange="setCfg('m21',this.value)"></label>
+      <label>Blackjack (× aposta)<input type="number" min="0" step="0.5" value="${cfg.mBJ}" onchange="setCfg('mBJ',this.value)"></label>
+    </div>
+    <div style="font-size:11.5px;color:#9fbfac;margin-top:6px">Mudou uma regra? Os pontos de todas as mãos já registradas são recalculados. Mão dobrada conta com a aposta em dobro.</div></details>`;
+  if(!hs.length){el.innerHTML='<span class="empty" style="font-size:13px">Nenhum resultado registrado ainda. Ao tocar no resultado do dealer, a rodada é registrada sozinha.</span>'+cfgBox;return}
   const W=hs.filter(h=>h.o==="w"||h.o==="bj").length, L=hs.filter(h=>h.o==="l").length, P=hs.filter(h=>h.o==="p").length;
-  const net=hs.reduce((s,h)=>s+profit(h.o,h.bet,h.d),0), hasBet=hs.some(h=>h.bet);
+  const hs2=[];stats.forEach(r=>r.o.forEach((o,i)=>hs2.push({o,bet:r.bet,d:r.dd?r.dd[i]:r.d,t:r.tt?r.tt[i]:null})));
+  const pts=hs2.reduce((s,h)=>s+points(h.o,h.bet,h.d,h.t),0);
+  const net=hs2.reduce((s,h)=>s+profit(h.o,h.bet||cfg.bet,h.d),0), hasBet=true;
   const grp=f=>{const g=hs.filter(f),w=g.filter(h=>h.o==="w"||h.o==="bj").length,l=g.filter(h=>h.o==="l").length;return{n:g.length,w,l,p:pct(w,w+l)}};
   const fy=grp(h=>h.f), fn=grp(h=>!h.f);
   const bar=(lb,g,cls="")=>`<div class="bar"><span class="lb">${lb}</span><span class="tr"><span class="fl ${cls}" style="width:${g.p??0}%"></span></span><span class="vl">${g.p===null?"—":g.p+"%"} <small style="opacity:.7">(${g.w}V/${g.l}D)</small></span></div>`;
@@ -604,7 +631,10 @@ function renderStats(){
     <div class="kpi r"><b>${L}</b><span>Derrotas</span></div>
     <div class="kpi"><b>${pct(W,W+L)??"—"}${W+L?"%":""}</b><span>Taxa de vitória · ${P} empate(s)</span></div>
   </div>
-  ${hasBet?`<div class="kpi ${net>=0?"g":"r"}" style="margin-top:8px"><b>${net>=0?"+":""}${net.toLocaleString("pt-BR")}</b><span>Saldo de fichas (rodadas com aposta preenchida)</span></div>`:""}
+  <div class="kpis" style="grid-template-columns:repeat(2,1fr);margin-top:8px">
+    <div class="kpi" style="background:rgba(245,197,66,.18)"><b style="color:#ffd85e">${pts.toLocaleString("pt-BR")}</b><span>Pontos ganhos</span></div>
+    <div class="kpi ${net>=0?"g":"r"}"><b>${(cfg.start+net).toLocaleString("pt-BR")}</b><span>Fichas (início ${cfg.start} · ${net>=0?"+":""}${net.toLocaleString("pt-BR")})</span></div>
+  </div>
   <div class="cmp"><h4>O programa está ajudando?</h4>
     ${bar("Seguindo",fy)}${bar("Sem seguir",fn,"n")}
     <div class="verd2">${verdict}</div></div>
@@ -613,11 +643,12 @@ function renderStats(){
   </div>
   <div style="font-size:12px;color:#cfe3d6;margin-top:10px">Últimas ${last.length} mãos:</div>
   <div class="seq">${last.map(h=>`<i class="${h.o}" title="${h.f?"seguiu":"não seguiu"}">${h.o==="l"?"D":h.o==="p"?"E":"V"}</i>`).join("")}</div>
+  ${cfgBox}
   <div style="font-size:11.5px;color:#9fbfac;margin-top:8px">Os dados ficam salvos neste navegador. Use "Copiar dados" para guardar uma cópia numa planilha.</div>`;
 }
 function copyCSV(){
-  const rows=[["data","caso_dealer","resultado_dealer","mao","resultado","seguiu","aposta","dobrou","saldo"]];
-  stats.forEach(r=>r.o.forEach((o,i)=>rows.push([new Date(r.t).toLocaleString("pt-BR"),r.c??"",r.r??"",i+1,{w:"vitoria",bj:"blackjack",p:"empate",l:"derrota"}[o],r.f?"sim":"nao",r.bet||"",r.d?"sim":"nao",profit(o,r.bet,r.d)])));
+  const rows=[["data","caso_dealer","resultado_dealer","mao","total","resultado","seguiu","aposta","dobrou","fichas","pontos"]];
+  stats.forEach(r=>r.o.forEach((o,i)=>{const d=r.dd?r.dd[i]:r.d,t=r.tt?r.tt[i]:"";rows.push([new Date(r.t).toLocaleString("pt-BR"),r.c??"",r.r??"",i+1,t,{w:"vitoria",bj:"blackjack",p:"empate",l:"derrota"}[o],r.f?"sim":"nao",r.bet||cfg.bet,d?"sim":"nao",profit(o,r.bet||cfg.bet,d),points(o,r.bet,d,t)])}));
   const csv=rows.map(r=>r.join(";")).join("\n");
   try{navigator.clipboard.writeText(csv).then(()=>flash("Dados copiados! Cole numa planilha."),()=>flash("Não foi possível copiar neste navegador."))}catch(e){flash("Não foi possível copiar neste navegador.")}
 }
@@ -643,18 +674,41 @@ function hideIos(){$("iosTip").style.display="none";try{localStorage.setItem("bj
   if(ios&&!standalone()&&!seen) $("iosTip").style.display="block";
   try{if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")&&window.self===window.top) navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}
 })();
-function newRound(){
-  const oc=hands.map((h,i)=>autoOutcome(h,i).o).filter(Boolean);
-  if(!dealer&&!dealerRes&&!oc.length){$("regHint").textContent="Marque a carta do dealer, o resultado dele ou o seu resultado antes de registrar.";return}
+let undoSnap=null, undoTimer=null;
+function canRegister(skipDealer){
+  if(filling()) return false;
+  if(myBJ) return true;
+  const any=hands.some(h=>h.length);
+  if(any&&hands.some(h=>h.length<2)) return false;
+  return any||!!dealer||(!!dealerRes&&!skipDealer);
+}
+function autoRegister(force){
+  if(!canRegister()){ $("regHint").textContent=filling()?"Termine de marcar as cartas das mãos divididas.":"Marque suas cartas para registrar."; return }
+  register();
+}
+function notSeen(){dealerRes=null;if(!canRegister(true)){$("regHint").textContent="Marque suas cartas ou a carta do dealer primeiro.";return}register()}
+function register(){
+  undoSnap=JSON.stringify({dealer,hands:hands.map(h=>({c:[...h],d:!!h.dbl})),active,splitEnd,dealerRes,myBJ,followed,bet:$("betIn").value,np:$("newPlayer").checked,rounds,stats,alertKey});
+  const res=hands.map((h,i)=>({a:autoOutcome(h,i),t:total(h).t,d:!!h.dbl})).filter(x=>x.a.o);
   if(dealer||dealerRes){rounds.push({c:dealer?caseOf(dealer):null,r:dealerRes,np:$("newPlayer").checked});rounds=rounds.slice(-15);save();}
-  if(oc.length){stats.push({t:Date.now(),c:dealer?caseOf(dealer):null,r:dealerRes,o:oc,f:followed,bet:+$("betIn").value||0,d:$("dbl").checked});saveStats();}
-  myBJ=false;setFollow(true);$("dbl").checked=false;
+  if(res.length){stats.push({t:Date.now(),c:dealer?caseOf(dealer):null,r:dealerRes,o:res.map(x=>x.a.o),tt:res.map(x=>x.t),dd:res.map(x=>x.d),f:followed,bet:+$("betIn").value||cfg.bet});saveStats();}
+  const sum=res.map(x=>OCN[x.a.o]+(x.a.why?` (${x.a.why})`:"")).join(" · ")||"rodada salva";
+  myBJ=false;setFollow(true);
   dealer=null;hands=[[]];active=0;splitEnd=-1;notice="";roundDone=false;dealerExtra=[];dealerRes=null;$("newPlayer").checked=false;
-  $("regHint").textContent="Rodada registrada.";render();
+  $("regHint").textContent="";render();
+  showToast(`✔ Rodada registrada · ${sum}`);
   const ev=evaluate();
   if(ev.cls==="v-go"&&alertKey!==ev.v){alertKey=ev.v;showAlert(ev)}
   else if(isMobile()) setTimeout(()=>goTo("pDealer"),150);
 }
+function undoRegister(){
+  if(!undoSnap) return; const u=JSON.parse(undoSnap); undoSnap=null;
+  dealer=u.dealer;hands=u.hands.map(x=>{const a=[...x.c];if(x.d)a.dbl=true;return a});active=u.active;splitEnd=u.splitEnd;dealerRes=u.dealerRes;myBJ=u.myBJ;
+  setFollow(u.followed);$("betIn").value=u.bet;$("newPlayer").checked=u.np;rounds=u.rounds;stats=u.stats;alertKey=u.alertKey;save();saveStats();
+  hideToast();closeAlert&&($("alertModal").style.display="none");render();goTo("pEnd");
+}
+function showToast(t){const el=$("toast");$("toastTxt").innerHTML=t;el.classList.add("show");clearTimeout(undoTimer);undoTimer=setTimeout(hideToast,6000)}
+function hideToast(){$("toast").classList.remove("show");undoSnap=null}
 let alertKey=null;
 function showAlert(ev){
   const kind=/servidor/.test(ev.v)?"servidor":/pausa/.test(ev.v)?"pausa":"mesa";
@@ -737,7 +791,7 @@ function calcBet(){
     m.textContent="1 ficha";renderBets(1,1);
     n.textContent=`1/20 de ${c.toLocaleString("pt-BR")} dá ${limit.toFixed(1).replace(".",",")}, menos que a aposta mínima. Aposte 1 (o mínimo do jogo) com cuidado.`;return}
   const rec=ok[ok.length-1];
-  m.textContent=rec.toLocaleString("pt-BR")+" fichas";renderBets(rec,limit);recBet=rec;$("betIn").value=rec;
+  m.textContent=rec.toLocaleString("pt-BR")+" fichas";renderBets(rec,limit);recBet=rec;
   let t=`1/20 de ${c.toLocaleString("pt-BR")} = ${(Math.floor(limit*10)/10).toLocaleString("pt-BR")}. A maior aposta permitida até esse limite é ${rec.toLocaleString("pt-BR")}.`;
   if(rec>20) t+=" Em torneios, o ideal é ficar entre 10 e 20.";
   n.textContent=t;
