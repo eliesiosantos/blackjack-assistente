@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assistente de Estratégia de Blackjack</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--felt:#0f5132;--felt2:#0b3d26;--gold:#c9a227;--ink:#14211b;--red:#b42323;--card:#fff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;background:radial-gradient(circle at 50% 0,#17704a,var(--felt2) 70%);color:#fff;min-height:100vh}
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 40px}
+  h1{font-size:22px;margin:4px 0 2px;font-weight:800}
+  .sub{color:#cfe3d6;font-size:13px;margin:0 0 18px}
+  .panel{background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px;margin-bottom:14px}
+  .label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+  .keys{display:grid;grid-template-columns:repeat(13,1fr);gap:6px}
+  @media(max-width:560px){.keys{grid-template-columns:repeat(7,1fr);gap:7px}}
+  .pcard{position:relative;aspect-ratio:5/7;background:linear-gradient(160deg,#fff 0%,#f4f1ea 100%);border:1px solid #d9d4c7;border-radius:7px;cursor:pointer;padding:0;font-family:Georgia,"Times New Roman",serif;color:#1b1b1b;box-shadow:0 2px 0 rgba(0,0,0,.25),0 3px 8px rgba(0,0,0,.18);transition:transform .12s,box-shadow .12s}
+  .pcard.red{color:#c0202a}
+  .pcard .cr{position:absolute;top:3px;left:4px;font-size:13px;font-weight:700;line-height:1;display:flex;flex-direction:column;align-items:center}
+  .pcard .cr small{font-size:10px;line-height:1}
+  .pcard .cr.b{top:auto;left:auto;bottom:3px;right:4px;transform:rotate(180deg)}
+  .pcard .cs{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(18px,4.2vw,26px)}
+  .pcard .cs.face{font-size:clamp(14px,3.2vw,20px);font-weight:700;border:1.5px solid currentColor;border-radius:4px;inset:26% 24%;background:repeating-linear-gradient(45deg,transparent 0 3px,rgba(0,0,0,.04) 3px 5px)}
+  @media(max-width:560px){.pcard .cr.b{display:none}.pcard .cr{font-size:12px;top:3px;left:3px}.pcard .cs{padding-top:8px;font-size:22px}.pcard .cs.face{inset:32% 18% 12% 26%;padding-top:0;font-size:15px}}
+  .pcard:hover{transform:translateY(-2px)}
+  .pcard:active{transform:translateY(1px)}
+  .pcard.sel{transform:translateY(-4px);box-shadow:0 0 0 3px var(--gold),0 6px 14px rgba(0,0,0,.35)}
+  .key{background:var(--card);color:var(--ink);border:0;border-radius:7px;padding:10px 0;font-weight:800;font-size:16px;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+  .key:active{transform:translateY(1px)}
+  .key.sel{background:var(--gold);color:#1a1300}
+  .hand{display:flex;gap:6px;flex-wrap:wrap;min-height:58px;align-items:center}
+  .pc.pcard{width:46px;flex:0 0 46px}
+  .pc .cs{font-size:20px}
+  .pc:hover::after{content:"×";position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;width:16px;height:16px;border-radius:50%;font-size:12px;line-height:16px;text-align:center}
+  .empty{color:#9fbfac;font-size:13px}
+  .small{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:600}
+  .result{border-radius:14px;padding:18px;margin-bottom:14px;background:#fff;color:var(--ink);border-left:8px solid var(--gold)}
+  .action{font-size:30px;font-weight:800;margin:2px 0 6px}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .chip{font-size:12px;font-weight:600;padding:4px 9px;border-radius:99px;background:#eef5f0;color:var(--felt)}
+  .why{font-size:14px;line-height:1.5;margin:0}
+  .c-hit{border-left-color:#1f7a4d}.c-stand{border-left-color:#2a5bd7}.c-double{border-left-color:var(--gold)}.c-split{border-left-color:#8a3fd1}.c-bust{border-left-color:var(--red)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  input[type=number]{background:#fff;border:0;border-radius:8px;padding:9px 10px;font:600 16px Inter,sans-serif;width:140px;color:var(--ink)}
+  .big{font-size:20px;font-weight:800}
+  .btn{background:var(--gold);color:#1a1300;border:0;border-radius:8px;padding:10px 14px;font-weight:800;cursor:pointer}
+  .hist{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+  .dot{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+  .d1{background:#7a1d1d}.d2{background:#8a6a12}.d3{background:#1f7a4d}
+  .res{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .res .key{font-size:13px;padding-left:2px;padding-right:2px;overflow:hidden}
+  .res .key[data-r="Estourou"]{font-size:11px}
+  .chk{display:flex;gap:8px;align-items:center;font-size:13px;margin-top:10px;color:#e6f1ea;cursor:pointer}
+  .chk input{width:17px;height:17px;accent-color:var(--gold)}
+  .dot{width:auto;min-width:40px;height:auto;padding:4px 6px;flex-direction:column;line-height:1.15;position:relative}
+  .dot small{font-weight:600;font-size:10px;opacity:.9}
+  .dot.np::after{content:"+";position:absolute;top:-6px;right:-5px;background:#fff;color:#14211b;border-radius:50%;width:14px;height:14px;font-size:11px;line-height:14px;text-align:center}
+  .r-bust{background:#1f7a4d}.r-mid{background:#8a6a12}.r-strong{background:#7a1d1d}.r-none{background:#44564c}
+  .verdict{margin-top:12px;border-radius:10px;padding:12px 14px;background:#fff;color:#14211b;border-left:6px solid #888}
+  .verdict b.v{display:block;font-size:19px;margin-bottom:3px}
+  .verdict ul{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.5}
+  .v-stay{border-left-color:#1f7a4d}.v-warn{border-left-color:var(--gold)}.v-go{border-left-color:var(--red)}
+  .bets{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .bchip{min-width:44px;text-align:center;padding:7px 8px;border-radius:99px;font-weight:800;font-size:13px;border:2px dashed rgba(255,255,255,.35)}
+  .bchip.ok{background:rgba(255,255,255,.12);border-style:solid;border-color:rgba(255,255,255,.4)}
+  .bchip.rec{background:var(--gold);color:#1a1300;border:2px solid #fff3c4;box-shadow:0 0 0 3px rgba(201,162,39,.35)}
+  .bchip.no{opacity:.35}
+  .sticky{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;width:min(728px,calc(100% - 24px));background:#fff;color:var(--ink);border-radius:12px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:none;align-items:center;gap:10px;cursor:pointer;border-left:6px solid var(--gold);z-index:5}
+  .sticky b{font-size:18px}.sticky span{font-size:12.5px;color:#555}
+  body{padding-bottom:70px}
+  .dstatus{margin-top:8px;font-size:13.5px;background:rgba(0,0,0,.2);border-radius:8px;padding:8px 10px}
+  .guide summary{font-size:15px;font-weight:800;color:var(--gold);list-style:none}
+  .guide summary::-webkit-details-marker{display:none}
+  .guide summary::after{content:" ▾";color:#fff}
+  .guide[open] summary::after{content:" ▴"}
+  .gbody{font-size:13.5px;line-height:1.55;color:#e6f1ea}
+  .gbody h3{font-size:14px;color:#fff;margin:16px 0 6px;border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:4px}
+  .gbody ol,.gbody ul{padding-left:20px;margin:6px 0}
+  .gbody li{margin-bottom:4px}
+  .gbody p{margin:6px 0}
+  .gcase{border-radius:8px;padding:9px 11px;margin:6px 0;border-left:5px solid}
+  .gcase.c1{background:rgba(122,29,29,.35);border-color:#d05050}
+  .gcase.c2{background:rgba(138,106,18,.35);border-color:var(--gold)}
+  .gcase.c3{background:rgba(31,122,77,.4);border-color:#5fd39a}
+  .gfoot{opacity:.7;font-size:12px}
+  .htabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .htabs:empty{display:none}
+  .htab{flex:1;min-width:100px;text-align:left;background:rgba(255,255,255,.1);color:#fff;border:2px solid transparent;border-left:5px solid #888;border-radius:9px;padding:6px 9px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;gap:1px}
+  .htab b{font-size:12px;color:var(--gold)} .htab span{font-size:13px;font-weight:700} .htab em{font-style:normal;font-size:11.5px;opacity:.85}
+  .htab.on{background:#fff;color:var(--ink);border-color:var(--gold)}
+  .htab.c-hit{border-left-color:#1f7a4d}.htab.c-stand{border-left-color:#2a5bd7}.htab.c-double{border-left-color:var(--gold)}.htab.c-split{border-left-color:#8a3fd1}.htab.c-bust{border-left-color:var(--red)}
+  details{font-size:13px;color:#d7e8dd;line-height:1.55}
+  summary{cursor:pointer;font-weight:600;color:#fff}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px}
+  td,th{padding:6px;border-bottom:1px solid rgba(255,255,255,.12);text-align:left}
+  th{color:var(--gold)}
+
+  /* ===== Tema mesa de jogo ===== */
+  :root{--felt:#6f8f2f;--gold:#f5c542;--ink:#1d2a12;--tbl:#cfd8b0}
+  body{font-family:Inter,system-ui,sans-serif;background:radial-gradient(circle at 50% 0,#17704a,#0b3d26 70%);background-attachment:fixed}
+  .wrap{position:relative;z-index:1}
+  h1,.label,.btn,.small,.action,.gbody h3,.guide summary,.verdict b.v,.big{font-family:Fredoka,Inter,sans-serif}
+  h1{font-weight:700;font-size:24px;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+  .sub{color:#cfe3d6;text-shadow:0 1px 0 rgba(0,0,0,.2)}
+  .panel{background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.12);border-radius:22px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+  .label{color:#fff7d1;font-weight:700;font-size:13px;letter-spacing:.06em;text-shadow:0 1px 0 rgba(0,0,0,.3)}
+  /* cartas */
+  .pcard{background:#fbfbf8;border:0;border-radius:7px;font-family:Fredoka,sans-serif;color:#262626;box-shadow:0 3px 0 rgba(0,0,0,.18),0 6px 12px rgba(0,0,0,.22);overflow:hidden}
+  .pcard.red{color:#e53b3b}
+  .pcard .gr{position:absolute;top:2px;left:6%;font-size:clamp(17px,3.6vw,26px);font-weight:600;line-height:1}
+  .pcard .gs{position:absolute;right:8%;bottom:6%;font-size:clamp(20px,4.6vw,32px);line-height:1}
+  .pcard:hover{transform:translateY(-3px)}
+  .pcard.sel{transform:translateY(-6px);box-shadow:0 0 0 3px #fff,0 0 0 6px #4fc04a,0 10px 18px rgba(0,0,0,.35)}
+  .pc.pcard{width:58px;flex:0 0 58px;aspect-ratio:5/7}
+  .pc .gr{font-size:24px}.pc .gs{font-size:28px}
+  /* total no estilo da mesa */
+  .tbadge{display:inline-flex;align-items:center;justify-content:center;min-width:54px;padding:2px 12px;background:#3d7d22;border:3px solid #8fd14f;border-radius:8px;color:#fff;font:700 28px Fredoka,sans-serif;box-shadow:0 3px 0 rgba(0,0,0,.25);text-shadow:0 2px 0 rgba(0,0,0,.25)}
+  .hand{gap:10px}
+  /* botões redondos do jogo */
+  .gbtn{--c1:#5a9cff;--c2:#2f6fe0;position:relative;width:84px;height:84px;border-radius:50%;border:4px solid #fff;background:radial-gradient(circle at 50% 30%,var(--c1),var(--c2) 70%);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:700 13px Fredoka,sans-serif;letter-spacing:.02em;text-shadow:0 1px 0 rgba(0,0,0,.35);box-shadow:0 5px 0 rgba(0,0,0,.25),0 8px 16px rgba(0,0,0,.25),inset 0 -6px 10px rgba(0,0,0,.18),inset 0 6px 10px rgba(255,255,255,.25);transition:transform .15s,opacity .15s,filter .15s}
+  .gbtn svg{width:28px;height:28px}
+  .gbtn.dbl{--c1:#6aa6ff;--c2:#2d63d8}.gbtn.spl{--c1:#b9b9b9;--c2:#808080}.gbtn.hit{--c1:#48d1cf;--c2:#1a9aa6}.gbtn.std{--c1:#ff6b9d;--c2:#e2336e}
+  .gbtn.off{opacity:.28;filter:grayscale(.6);transform:scale(.86)}
+  .gbtn.on{transform:scale(1.08);animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 5px 0 rgba(0,0,0,.25),0 0 0 0 rgba(255,255,255,.7),inset 0 -6px 10px rgba(0,0,0,.18),inset 0 6px 10px rgba(255,255,255,.25)}50%{box-shadow:0 5px 0 rgba(0,0,0,.25),0 0 0 10px rgba(255,255,255,0),inset 0 -6px 10px rgba(0,0,0,.18),inset 0 6px 10px rgba(255,255,255,.25)}}
+  .gbtns{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:6px 0 4px}
+  .gbtns .pair{display:flex;gap:10px}
+  .gcap{text-align:center;font:600 11.5px Fredoka,sans-serif;color:#33441b;margin-top:6px}
+  .gwrap{display:flex;flex-direction:column;align-items:center}
+  @media(max-width:420px){.gbtn{width:70px;height:70px;font-size:11.5px}.gbtn svg{width:23px;height:23px}.gbtns .pair{gap:6px}}
+  /* painel de decisão */
+  .result{background:linear-gradient(#fbfcf3,#eef3dc);border:0;border-radius:22px;box-shadow:0 6px 0 rgba(0,0,0,.15),0 12px 24px rgba(0,0,0,.2)}
+  .result .action{font:700 26px Fredoka,sans-serif;text-align:center;margin:10px 0 4px}
+  .result .why{text-align:center;color:#3a4a26}
+  .result .meta{justify-content:center;align-items:center}
+  .chip{background:#e3ecc6;color:#3b5216;font-family:Fredoka,sans-serif;font-weight:600}
+  .bust{text-align:center;font:700 34px Fredoka,sans-serif;color:#e53b3b;margin:8px 0}
+  /* outros botões */
+  .btn{background:radial-gradient(circle at 50% 25%,#ffd85e,#f0a81c 80%);color:#4a2e00;border:3px solid #fff;border-radius:99px;padding:9px 18px;font-weight:700;font-size:15px;box-shadow:0 4px 0 rgba(0,0,0,.22)}
+  .small{border:2px solid rgba(255,255,255,.7);border-radius:99px;background:rgba(0,0,0,.12);font-weight:600;padding:4px 12px}
+  .res .key{background:#fbfbf8;border-radius:99px;font:700 15px Fredoka,sans-serif;color:#2b3a16;padding:9px 0;border:3px solid transparent;box-shadow:0 3px 0 rgba(0,0,0,.2)}
+  .res .key[data-r="Estourou"]{font-size:11px}
+  .res .key.sel{background:radial-gradient(circle at 50% 25%,#6be06a,#2f9c2f 80%);color:#fff;border-color:#fff}
+  .sticky{border-radius:99px;border:3px solid #fff !important;background:linear-gradient(#fbfcf3,#e9f0d3);padding:6px 16px 6px 6px}
+  .sticky .gbtn{width:46px;height:46px;border-width:3px;font-size:0}
+  .sticky .gbtn svg{width:20px;height:20px}
+  .sticky b{font-family:Fredoka,sans-serif;font-size:19px}
+  .htab{background:rgba(255,255,255,.18);border-radius:14px}
+  .htab.on{background:#fbfbf8}
+  .htab b{color:#fff3b0}.htab.on b{color:#3d7d22}
+  .verdict{border-radius:16px;font-family:Inter,sans-serif}
+  .bchip.rec{background:radial-gradient(circle at 50% 25%,#ffd85e,#f0a81c 80%);color:#4a2e00;border-color:#fff}
+  input[type=number]{border-radius:99px;padding:9px 14px;font-family:Fredoka,sans-serif}
+  .guide summary{color:#fff7d1;text-shadow:0 1px 0 rgba(0,0,0,.3)}
+  .order{text-align:center;font:600 13px Fredoka,sans-serif;color:#5a2a91;background:#f1e7ff;border-radius:99px;padding:5px 12px;margin:0 auto 10px;width:fit-content}
+  .htab .ord{font-size:10.5px;opacity:.8}
+
+  .oc{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .oc .hn{font:600 13px Fredoka,sans-serif;min-width:52px;color:#fff3b0}
+  .ob{border:3px solid transparent;border-radius:99px;padding:7px 14px;font:700 14px Fredoka,sans-serif;cursor:pointer;background:#fbfbf8;color:#2b3a16;box-shadow:0 3px 0 rgba(0,0,0,.2)}
+  .ob.on.w{background:radial-gradient(circle at 50% 25%,#6be06a,#2f9c2f 80%);color:#fff;border-color:#fff}
+  .ob.on.bj{background:radial-gradient(circle at 50% 25%,#ffd85e,#f0a81c 80%);color:#4a2e00;border-color:#fff}
+  .ob.on.l{background:radial-gradient(circle at 50% 25%,#ff7a7a,#d13a3a 80%);color:#fff;border-color:#fff}
+  .ob.on.p{background:radial-gradient(circle at 50% 25%,#c9c9c9,#8a8a8a 80%);color:#fff;border-color:#fff}
+  .seg{display:flex;align-items:center;gap:4px;font-size:13px}
+  .seg span{margin-right:4px}
+  .seg button{border:2px solid rgba(255,255,255,.6);background:transparent;color:#fff;border-radius:99px;padding:4px 12px;font:600 13px Fredoka,sans-serif;cursor:pointer}
+  .seg button.on{background:#fff;color:#1d2a12}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  @media(max-width:520px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:rgba(255,255,255,.08);border-radius:14px;padding:10px;text-align:center}
+  .kpi b{display:block;font:700 24px Fredoka,sans-serif}
+  .kpi span{font-size:11.5px;color:#cfe3d6}
+  .kpi.g b{color:#7ee07c}.kpi.r b{color:#ff8a8a}
+  .cmp{margin-top:12px;background:rgba(255,255,255,.06);border-radius:14px;padding:12px}
+  .cmp h4{margin:0 0 8px;font:700 14px Fredoka,sans-serif}
+  .bar{display:flex;align-items:center;gap:8px;font-size:12.5px;margin:6px 0}
+  .bar .lb{width:130px;flex:0 0 130px}
+  .bar .tr{flex:1;height:14px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden}
+  .bar .fl{height:100%;border-radius:99px;background:linear-gradient(90deg,#2f9c2f,#7ee07c)}
+  .bar .fl.n{background:linear-gradient(90deg,#9a7a1c,#f0c542)}
+  .bar .vl{width:92px;text-align:right;font-weight:700}
+  .seq{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+  .seq i{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 11px Fredoka,sans-serif;font-style:normal}
+  .seq .w,.seq .bj{background:#2f9c2f}.seq .l{background:#c33}.seq .p{background:#777}
+  .verd2{margin-top:10px;font-size:13px;background:#fff;color:#1d2a12;border-radius:12px;padding:10px 12px}
+  .bar .fl{display:block}
+  .bar .tr{display:block}
+  @media(max-width:520px){.bar .lb{width:96px;flex-basis:96px;font-size:11.5px}.bar .vl{width:84px;font-size:12px}}
+  .res .key{padding:9px 0;font-size:14px}
+  .res .key[data-r="Estourou"]{font-size:10px;letter-spacing:-.02em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>♠ Assistente de Estratégia de Blackjack</h1>
+  <p class="sub">Toque na carta do dealer e nas suas cartas para ver a melhor jogada.</p>
+  <details class="panel guide" id="guide">
+    <summary>📘 Como usar o programa e as regras da estratégia</summary>
+    <div class="gbody">
+      <h3>Passo a passo de cada rodada</h3>
+      <ol>
+        <li><b>Carta aberta do dealer:</b> toque na carta que o dealer está mostrando.</li>
+        <li><b>Suas cartas:</b> toque nas 2 cartas que abriram para você. Se pedir mais carta, toque na nova também.</li>
+        <li><b>Dividiu?</b> Quando aparecer <b>Dividir</b>, toque em <b>Dividi as cartas ✂️</b>. Depois toque nas cartas que o dealer distribuiu, na ordem: a 1ª vai para a Mão 1, a 2ª para a Mão 2. Em seguida o programa mostra primeiro a decisão da <b>última mão</b> (Mão 2) e depois volta para a Mão 1, igual ao jogo. Se precisar, toque na aba de uma mão para corrigir.</li>
+        <li><b>Sua decisão:</b> leia a recomendação (Pedir, Parar, Dobrar ou Dividir). Ela também aparece na barra fixa no rodapé.</li>
+        <li><b>Fim da rodada:</b> marque o resultado final do dealer (17 a 21, BJ ou Estourou), marque se entrou jogador novo e toque em <b>Registrar rodada</b>.</li>
+        <li><b>Seu resultado:</b> é calculado sozinho comparando suas cartas com o resultado do dealer (uma linha por mão se dividiu). Só toque em <b>Fiz Blackjack</b> quando o jogo encerrar antes de você marcar as cartas. Diga se seguiu a recomendação e, se quiser, o valor apostado. O painel <b>Minhas estatísticas</b> mostra sua taxa de vitória seguindo e sem seguir o programa.</li>
+        <li><b>Controle de mesa:</b> depois de 3 rodadas, o programa diz se você deve ficar, trocar de mesa, trocar de servidor ou fazer uma pausa. Quando trocar, toque em <b>Troquei de mesa</b> ou <b>Troquei de servidor</b>.</li>
+      </ol>
+
+      <h3>Valor das cartas</h3>
+      <p>Cartas de 2 a 10 valem o número. <b>J, Q e K</b> valem 10. O <b>Ás</b> vale 1 ou 11, o que for melhor para você (o programa calcula sozinho).</p>
+      <p>Regra da mesa: o dealer <b>pede carta até 16 e para no 17</b> ou mais. Por isso a carta aberta dele diz muito sobre a rodada.</p>
+
+      <h3>Os 3 casos</h3>
+      <div class="gcase c1"><b>Caso 1 — Difícil</b> · dealer mostra 10, J, Q, K ou Ás<br>Grande chance de ele chegar a 19, 20 ou blackjack. Peça até passar de 16 e pare. O objetivo é perder pouco. Não dobre nem divida.</div>
+      <div class="gcase c2"><b>Caso 2 — Moderado</b> · dealer mostra 7, 8 ou 9<br>Imagine que a próxima carta dele é um 10. Peça até chegar a <b>carta do dealer + 10</b> (com 7, mire em 17) e pare. Não dobre nem divida.</div>
+      <div class="gcase c3"><b>Caso 3 — Zona de ouro</b> · dealer mostra 2, 3, 4, 5 ou 6<br>O dealer tem grande chance de estourar. Peça só até passar de 11 e pare, mesmo com 12 a 16. Deixe ele cair. É aqui que você mais pontua.</div>
+
+      <h3>Dobrar e dividir (só no Caso 3)</h3>
+      <ul>
+        <li><b>Dobrar:</b> quando seu total é exatamente 10 ou 11 com apenas 2 cartas. A aposta dobra e você recebe uma única carta final.</li>
+        <li><b>Dividir:</b> quando suas 2 cartas são iguais (ex.: 3 e 3). Cada mão segue a regra de parar depois de 11. Se vier outra carta igual, divida de novo.</li>
+        <li>No Caso 1 ou 2, dobrar só dobra o prejuízo.</li>
+      </ul>
+
+      <h3>Quando trocar de mesa</h3>
+      <ul>
+        <li>O dealer abre com carta do Caso 1 ou 2 várias vezes seguidas.</li>
+        <li>O dealer não estoura e fecha forte (19, 20, 21, BJ) seguidamente.</li>
+        <li>Você estava ganhando, entrou um jogador novo e as coisas pioraram.</li>
+        <li>Se continuar ruim depois de trocar de mesa, troque de servidor. Se ainda assim continuar, faça uma pausa.</li>
+      </ul>
+
+      <h3>Onde sentar</h3>
+      <p>Prefira uma <b>mesa vazia</b>. Se não houver, pegue o <b>último lugar livre</b>: assim você vê as cartas dos outros jogadores antes da sua vez. Evite o primeiro lugar.</p>
+
+      <h3>Quanto apostar</h3>
+      <p>Nunca aposte mais que <b>1/20 das suas fichas</b> (com 1.000 fichas, até 50). Em torneios, fique entre 10 e 20. Use a calculadora no fim da página: ela já escolhe entre os valores que o jogo aceita.</p>
+      <p class="gfoot">A estratégia é um guia e não garante vitória.</p>
+    </div>
+  </details>
+
+
+  <div class="panel">
+    <div class="label">1 · Carta aberta do dealer <button class="small" onclick="setDealer(null)">Limpar</button></div>
+    <div class="keys" id="dealerKeys"></div>
+  </div>
+
+  <div class="panel">
+    <div class="label">2 · Suas cartas <span><button class="small" onclick="undo()">Desfazer</button> <button class="small" onclick="clearHand()">Limpar</button></span></div>
+    <div style="font-size:12.5px;color:#cfe3d6;margin:-2px 0 8px">Toque nas 2 cartas que abriram para você. A cada carta nova que pedir, toque nela também.</div>
+    <div class="keys" id="playerKeys"></div>
+    <div style="height:10px"></div>
+    <div class="htabs" id="handTabs"></div>
+    <div class="hand" id="hand"></div>
+  </div>
+
+  <div class="label" style="font-size:13px;margin:0 0 6px 4px">3 · SUA DECISÃO</div>
+  <div class="result" id="result"></div>
+
+  <div class="panel">
+    <div class="label">4 · Fim da rodada: controle de mesa</div>
+    <div style="font-size:13px;color:#cfe3d6;margin-bottom:8px">Resultado final do dealer nesta rodada:</div>
+    <div class="res" id="resKeys"></div>
+    <div style="font-size:13px;color:#cfe3d6;margin:14px 0 8px">Seu resultado (calculado automaticamente):</div>
+    <div id="outcomeArea"></div>
+    <div class="row" style="margin-top:10px;gap:14px">
+      <div class="seg" id="followSeg"><span>Seguiu a recomendação?</span><button data-v="1" class="on" onclick="setFollow(true)">Sim</button><button data-v="0" onclick="setFollow(false)">Não</button></div>
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px">Aposta: <input id="betIn" type="number" min="0" placeholder="opcional" style="width:100px;padding:6px 10px;font-size:14px"></label>
+      <label class="chk" style="margin:0"><input type="checkbox" id="dbl"> Dobrei</label>
+    </div>
+    <label class="chk"><input type="checkbox" id="newPlayer"> Entrou um jogador novo na mesa nesta rodada</label>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" onclick="newRound()">Registrar rodada ▸</button>
+      <span style="font-size:12.5px;color:#cfe3d6" id="regHint">Salva o dealer, o seu resultado e limpa a mesa.</span>
+    </div>
+    <div class="hist" id="hist"></div>
+    <div style="font-size:11.5px;color:#b9d3c3;margin-top:6px">Cores: <b style="color:#5fd39a">verde</b> = dealer estourou · <b style="color:#e7c25a">amarelo</b> = 17-18 · <b style="color:#ff8a8a">vermelho</b> = 19+ ou BJ · C1/C2/C3 = carta aberta · + = jogador novo</div>
+    <div class="verdict" id="verdict"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="small" onclick="swap('mesa')">Troquei de mesa</button>
+      <button class="small" onclick="swap('servidor')">Troquei de servidor</button>
+      <button class="small" onclick="resetAll()">Voltei da pausa / zerar tudo</button>
+    </div>
+  </div>
+
+
+  <div class="panel" id="statsPanel">
+    <div class="label">5 · Minhas estatísticas <span><button class="small" onclick="copyCSV()">Copiar dados</button> <button class="small" id="resetStatsBtn" onclick="resetStats()">Zerar</button></span></div>
+    <div id="stats"></div>
+  </div>
+  <div class="panel">
+    <div class="label">Calculadora de aposta (regra de 1/20)</div>
+    <div class="row">
+      <label for="chips" style="font-size:14px">Minhas fichas:</label>
+      <input id="chips" type="number" min="0" placeholder="ex.: 1000" oninput="calcBet()">
+      <div>Aposte: <span class="big" id="maxBet">—</span></div>
+    </div>
+    <div class="bets" id="betChips"></div>
+    <p style="font-size:12.5px;color:#cfe3d6;margin:8px 0 0" id="betNote">Em torneios, prefira apostas entre 10 e 20, sempre abaixo de 1/20 das fichas.</p>
+  </div>
+
+  <div class="panel">
+    <details>
+      <summary>Ver as regras usadas</summary>
+      <table>
+        <tr><th>Dealer mostra</th><th>Caso</th><th>Peça carta até…</th><th>Dobrar / Dividir</th></tr>
+        <tr><td>10, J, Q, K, A</td><td>1 — difícil</td><td>passar de 16</td><td>Não</td></tr>
+        <tr><td>7, 8, 9</td><td>2 — moderado</td><td>chegar a carta do dealer + 10</td><td>Não</td></tr>
+        <tr><td>2 a 6</td><td>3 — zona de ouro</td><td>passar de 11</td><td>Dobrar com 10 ou 11 em 2 cartas · Dividir pares</td></tr>
+      </table>
+      <p>Trocar de mesa quando o dealer mostra Caso 1 ou 2 várias vezes seguidas. Se continuar, trocar de servidor; se ainda continuar, fazer uma pausa.<br>
+      Preferir mesa vazia ou o último lugar livre, para ver as cartas dos outros antes da sua vez.</p>
+      <p style="opacity:.75">Serve como guia, não como garantia de vitória.</p>
+    </details>
+  </div>
+</div>
+<div class="sticky" id="sticky" onclick="document.getElementById('result').scrollIntoView({behavior:'smooth',block:'center'})"></div>
+
+<script>
+const $=id=>document.getElementById(id)||{style:{},classList:{toggle(){}},appendChild(){},set innerHTML(v){},set textContent(v){},checked:false,value:""};
+const RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+let dealer=null, hands=[[]], active=0, rounds=[];
+const H=()=>hands[active];
+try{rounds=JSON.parse(localStorage.getItem("bj_hist")||"[]")}catch(e){rounds=[]}
+
+const val=r=>r==="A"?11:["J","Q","K","10"].includes(r)?10:+r;
+function total(cards){let t=0,a=0;for(const c of cards){t+=val(c);if(c==="A")a++}while(t>21&&a){t-=10;a--}return{t,soft:a>0}}
+function caseOf(d){if(!d)return null;const v=val(d);if(v>=10)return 1;if(v>=7)return 2;return 3}
+
+const SUITS=["♠","♥","♣","♦"];
+const suitOf=(r,shift=0)=>SUITS[(RANKS.indexOf(r)+shift)%4];
+function cardHTML(r,shift=0){const su=suitOf(r,shift);return `<span class="gr">${r}</span><span class="gs">${su}</span>`}
+const isRed=(r,shift=0)=>"♥♦".includes(suitOf(r,shift));
+function mkKeys(id,fn,shift=0){const el=$(id);RANKS.forEach(r=>{const b=document.createElement("button");b.className="pcard"+(isRed(r,shift)?" red":"");b.innerHTML=cardHTML(r,shift);b.dataset.r=r;b.setAttribute("aria-label","Carta "+r);b.onclick=()=>fn(r);el.appendChild(b)})}
+mkKeys("dealerKeys",r=>setDealer(dealer===r?null:r));
+mkKeys("playerKeys",r=>{addCard(r)},1);
+
+let dealerExtra=[];
+function setDealer(r){dealer=r;if(dealerExtra.length)dealerRes=autoRes();render()}
+function autoRes(){
+  if(!dealer||!dealerExtra.length) return null;
+  const cards=[dealer,...dealerExtra], t=total(cards).t;
+  if(cards.length===2&&t===21) return "BJ";
+  if(t>21) return "Estourou";
+  if(t>=17) return String(t);
+  return null;
+}
+function dealerUndo(){dealerExtra.pop();dealerRes=autoRes();render()}
+function undo(){if(!H().length&&hands.length>1){hands.splice(active,1);active=Math.max(0,active-1)}else H().pop();render()}
+function clearHand(){hands=[[]];active=0;splitEnd=-1;render()}
+function removeAt(i){H().splice(i,1);render()}
+function selectHand(i){active=i;render()}
+/* Após dividir: o dealer dá 1 carta para cada mão (Mão 1, Mão 2...).
+   Depois a decisão começa pela última mão e volta até a Mão 1. */
+const filling=()=>hands.length>1&&hands.some(h=>h.length===1);
+const firstToFill=()=>hands.findIndex(h=>h.length===1);
+function isDone(h){const c=advise(h,true).cls;return h.length>=2&&(c==="c-stand"||c==="c-bust")}
+function nextToPlay(from=hands.length){for(let i=from-1;i>=0;i--) if(!isDone(hands[i])&&hands[i].length>=2) return i;
+  for(let i=hands.length-1;i>=0;i--) if(!isDone(hands[i])&&hands[i].length>=2) return i; return -1}
+function addCard(r){
+  const wasFilling=filling();
+  H().push(r);
+  if(wasFilling){
+    if(filling()) active=firstToFill();      // próxima mão que ainda espera a 2ª carta
+    else active=splitEnd>=0?splitEnd:hands.length-1; // terminou a distribuição: começa pela última mão dividida
+  }
+  render();
+}
+function doSplit(){
+  const h=H(); if(h.length!==2||h[0]!==h[1]) return;
+  hands.splice(active,1,[h[0]],[h[1]]); splitEnd=active+1; active=firstToFill(); render();
+}
+let splitEnd=-1;
+function nextHand(){if(active>0){active--;render()}}
+
+function advise(hand=H(),split=hands.length>1){
+  if(!dealer&&!hand.length) return {cls:"",act:"Comece pela carta do dealer",why:"Escolha a carta que o dealer está mostrando e depois adicione as suas cartas."};
+  if(!dealer) return {cls:"",act:"Falta a carta do dealer",why:"A estratégia depende da carta que o dealer mostra."};
+  const k=caseOf(dealer), dv=val(dealer);
+  if(!hand.length) return {cls:"",act:"Adicione suas cartas",why:caseText(k)};
+  if(split&&hand.length===1) return {cls:"",act:"Adicione a 2ª carta",why:`Esta mão começou com ${hand[0]} na divisão. Toque na carta que veio para ela.`};
+  const {t,soft}=total(hand), two=hand.length===2;
+  if(t>21) return {cls:"c-bust",act:"Estourou 💥",why:`Seu total é ${t}, passou de 21. Clique em "Próxima rodada" para registrar e seguir.`};
+  if(t===21) return {cls:"c-stand",act:two&&!split?"Blackjack! Pare ✋":"21: pare ✋",why:"Total máximo. Não peça mais cartas."};
+  if(k===3){
+    if(two&&hand[0]===hand[1]) return {cls:"c-split",act:"Dividir ✂️",why:`O dealer mostra ${dealer} (zona de ouro) e você tem um par de ${hand[0]}. Divida e jogue cada mão pela mesma regra: peça até passar de 11 e pare. Se vier outro ${hand[0]}, divida de novo.`,split:true};
+    if(two&&(t===10||t===11)) return {cls:"c-double",act:"Dobrar ×2",why:`Total ${t} com só duas cartas contra ${dealer}. A próxima carta tem boa chance de ser alta (19 a 21), e o dealer tende a estourar.`};
+    if(t<=11) return {cls:"c-hit",act:"Pedir carta ➕",why:`Seu total é ${t}. No Caso 3 você pede até passar de 11.`};
+    return {cls:"c-stand",act:"Parar ✋",why:`Seu total (${t}) já passou de 11. Com o dealer em ${dealer}, deixe que ele arrisque estourar.`};
+  }
+  if(k===2){
+    const alvo=dv+10;
+    if(t<alvo) return {cls:"c-hit",act:"Pedir carta ➕",why:`Caso 2: a meta é carta do dealer + 10 = ${alvo}. Seu total é ${t}. Não dobre nem divida aqui.`};
+    return {cls:"c-stand",act:"Parar ✋",why:`Você chegou a ${t}, na meta de ${alvo} ou acima (dealer ${dealer} + 10). Não arrisque mais.`};
+  }
+  if(t<=16) return {cls:"c-hit",act:"Pedir carta ➕",why:`Caso 1 (dealer com ${dealer}): peça até passar de 16. Seu total é ${t}. Não dobre nem divida.`};
+  return {cls:"c-stand",act:"Parar ✋",why:`Seu total (${t}) passou de 16. Contra ${dealer}, o objetivo é perder pouco, então não force.`};
+}
+function caseText(k){return k===1?"Caso 1 (difícil): você vai pedir até passar de 16.":k===2?"Caso 2 (moderado): você vai pedir até chegar a carta do dealer + 10.":"Caso 3 (zona de ouro): você vai pedir até passar de 11. Pode dobrar ou dividir."}
+
+const ICON={
+ dbl:'<svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="2.4"><circle cx="13" cy="13" r="8"/><circle cx="13" cy="13" r="3.5"/><text x="20" y="29" font-size="11" font-family="Fredoka" font-weight="700" fill="#fff" stroke="none">x2</text></svg>',
+ spl:'<svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"><rect x="5" y="4" width="12" height="17" rx="2"/><rect x="15" y="9" width="12" height="17" rx="2" fill="rgba(255,255,255,.25)"/><path d="M4 27h8M9 24l3 3-3 3M28 2h-8M23 -1"/></svg>',
+ hit:'<svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"><rect x="6" y="5" width="13" height="19" rx="2"/><rect x="12" y="9" width="13" height="19" rx="2" fill="rgba(255,255,255,.3)"/><path d="M18.5 15v7M15 18.5h7"/></svg>',
+ std:'<svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17V8a2 2 0 0 1 4 0v7M15 14V6a2 2 0 0 1 4 0v8M19 14V8a2 2 0 0 1 4 0v10c0 5-3 9-8 9-3 0-5-2-7-5l-3-5a2 2 0 0 1 3-2l2 2"/></svg>'};
+const BTN=[["dbl","DOUBLE","Dobrar","c-double"],["spl","SPLIT","Dividir","c-split"],["hit","HIT","Pedir","c-hit"],["std","STAND","Parar","c-stand"]];
+function gameButtons(cls){
+  const b=([k,en,pt,c])=>`<div class="gwrap"><div class="gbtn ${k} ${cls===c?"on":"off"}">${ICON[k]}<span>${en}</span></div><div class="gcap">${pt}</div></div>`;
+  return `<div class="gbtns"><div class="pair">${b(BTN[0])}${b(BTN[1])}</div><div class="pair">${b(BTN[2])}${b(BTN[3])}</div></div>`;
+}
+function render(){
+  document.querySelectorAll("#dealerKeys .pcard").forEach(b=>b.classList.toggle("sel",b.dataset.r===dealer));
+  const hand=H(), h=$("hand");
+  $("handTabs").innerHTML=hands.length>1?hands.map((hh,i)=>{const ad=advise(hh,true);return `<button class="htab ${i===active?"on":""} ${ad.cls}" onclick="selectHand(${i})"><b>Mão ${i+1} <span class="ord">${filling()?(hh.length===1?"· aguardando carta":""):"· "+(hands.length-i)+"ª a decidir"}</span></b><span>${hh.length?hh.join(" "):"—"}${hh.length>1?" = "+total(hh).t:""}</span><em>${ad.act}</em></button>`}).join(""):"";
+  h.innerHTML=hand.length?hand.map((c,i)=>`<div class="pc pcard${isRed(c,i+1)?" red":""}" title="Remover" onclick="removeAt(${i})">${cardHTML(c,i+1)}</div>`).join(""):'<span class="empty">Nenhuma carta ainda</span>';
+  const a=advise(), r=$("result");
+  r.className="result "+a.cls;
+  let chips="";
+  if(dealer){const k=caseOf(dealer);chips+=`<span class="chip">Dealer: ${dealer} · Caso ${k}</span>`}
+  if(hand.length){const {t,soft}=total(hand);chips+=`<span class="tbadge">${t}</span><span class="chip">Seu total${soft&&t<21?" (Ás = 11)":""}</span><span class="chip">${hand.length} carta${hand.length>1?"s":""}</span>`}
+  const order=hands.length>1?(filling()?`Distribuindo: próxima carta vai para a <b>Mão ${firstToFill()+1}</b>`:`Ordem de decisão: ${hands.map((_,i)=>"Mão "+(i+1)).reverse().join(" → ")}`):"";
+  const tag=hands.length>1?`<span class="chip" style="background:#f1e7ff;color:#5a2a91">Mão ${active+1} de ${hands.length}</span>`:"";
+  const nxt=active-1;
+  const done=hands.length>1&&!filling()&&active>0&&H().length>=2&&!a.split;
+  r.innerHTML=(order?`<div class="order">${order}</div>`:"")+`${chips||tag?`<div class="meta">${tag}${chips}</div>`:""}${a.cls==="c-bust"?`<div class="bust">ESTOUROU 💥</div>`:a.cls?gameButtons(a.cls):""}<div class="action">${a.act}</div><p class="why">${a.why}</p>`
+    +(a.split?`<button class="btn" style="margin-top:10px" onclick="doSplit()">Dividi as cartas ✂️</button>`:"")
+    +(done?`<button class="btn" style="margin-top:10px;margin-left:6px" onclick="nextHand()">Ir para a Mão ${nxt+1} ▸</button>`:"");
+  const st=$("sticky");
+  if(dealer&&hand.length){st.style.display="flex";st.className="sticky "+a.cls;st.innerHTML=`${BTN.filter(x=>x[3]===a.cls).map(([k])=>`<div class="gbtn ${k}">${ICON[k]}</div>`).join("")}<b>${a.act}</b><span>${hands.length>1?`Mão ${active+1}/${hands.length} · `:""}Dealer ${dealer} · você ${total(hand).t}</span>`}
+  else st.style.display="none";
+  renderHist();
+}
+
+/* ---------- Controle de mesa ---------- */
+const RESULTS=["17","18","19","20","21","BJ","Estourou"];
+let dealerRes=null, swaps={mesa:0,servidor:0};
+try{const s=JSON.parse(localStorage.getItem("bj_swaps")||"null");if(s)swaps=s}catch(e){}
+if(!Array.isArray(rounds))rounds=[];
+rounds=rounds.map(h=>typeof h==="number"?{c:h,r:null,np:false}:h).filter(h=>h&&typeof h==="object");
+if(!swaps||typeof swaps!=="object")swaps={mesa:0,servidor:0};
+
+(function(){const el=$("resKeys");RESULTS.forEach(r=>{const b=document.createElement("button");b.className="key";b.textContent=r;b.dataset.r=r;b.onclick=()=>{dealerRes=dealerRes===r?null:r;render()};el.appendChild(b)})})();
+
+const resClass=r=>r===null?"r-none":r==="Estourou"?"r-bust":(r==="BJ"||+r>=19)?"r-strong":"r-mid";
+const strong=r=>r==="BJ"||(r!==null&&r!=="Estourou"&&+r>=19);
+function save(){try{localStorage.setItem("bj_hist",JSON.stringify(rounds));localStorage.setItem("bj_swaps",JSON.stringify(swaps))}catch(e){}}
+
+
+/* ---------- Estatísticas ---------- */
+let followed=true, stats=[], recBet=null, resetArm=false;
+try{const x=JSON.parse(localStorage.getItem("bj_stats")||"[]");if(Array.isArray(x))stats=x}catch(e){}
+const OC=[["w","Ganhei"],["bj","Blackjack"],["p","Empate"],["l","Perdi"]];
+let myBJ=false;
+function toggleBJ(){myBJ=!myBJ;renderOutcome()}
+/* calcula o resultado de cada mão a partir das cartas e do resultado do dealer */
+function autoOutcome(h,i){
+  const n=hands.length, natural=n===1&&h.length===2&&total(h).t===21;
+  if(n===1&&(myBJ||natural)) return dealerRes==="BJ"?{o:"p",why:"Blackjack x Blackjack"}:{o:"bj",why:"Blackjack!"};
+  if(!h.length) return {o:null,why:"marque suas cartas"};
+  if(n>1&&h.length<2) return {o:null,why:"faltam cartas"};
+  const t=total(h).t;
+  if(t>21) return {o:"l",why:`você estourou (${t})`};
+  if(!dealerRes) return {o:null,why:`você ${t} · marque o resultado do dealer`};
+  if(dealerRes==="Estourou") return {o:"w",why:`${t} x dealer estourou`};
+  if(dealerRes==="BJ") return {o:"l",why:`${t} x Blackjack do dealer`};
+  const d=+dealerRes;
+  return {o:t>d?"w":t<d?"l":"p",why:`${t} x ${d}`};
+}
+const OCN={w:"Ganhou",bj:"Blackjack",p:"Empate",l:"Perdeu"};
+function renderOutcome(){
+  const n=hands.length;
+  const rows=hands.map((h,i)=>{const a=autoOutcome(h,i);return `<div class="oc">${n>1?`<span class="hn">Mão ${i+1}</span>`:""}<span class="ob ${a.o||""} ${a.o?"on":""}" style="cursor:default">${a.o?OCN[a.o]:"—"}</span><span style="font-size:12.5px;color:#cfe3d6">${a.why}</span></div>`}).join("");
+  $("outcomeArea").innerHTML=rows+(n===1?`<div class="oc" style="margin-top:4px"><button class="ob bj ${myBJ?"on":""}" onclick="toggleBJ()">★ Fiz Blackjack</button><span style="font-size:12px;color:#cfe3d6">use quando o jogo encerrar antes de você marcar as cartas</span></div>`:"");
+}
+function setFollow(v){followed=v;document.querySelectorAll("#followSeg button").forEach(b=>b.classList.toggle("on",(b.dataset.v==="1")===v))}
+function saveStats(){try{localStorage.setItem("bj_stats",JSON.stringify(stats))}catch(e){}}
+function profit(o,bet,dbl){if(!bet)return 0;const m=dbl?2:1;return o==="w"?bet*m:o==="bj"?bet*1.5:o==="l"?-bet*m:0}
+function pct(a,b){return b?Math.round(a/b*100):null}
+function renderStats(){
+  const el=$("stats"); const hs=[];
+  stats.forEach(r=>r.o.forEach(o=>hs.push({...r,o})));
+  if(!hs.length){el.innerHTML='<span class="empty" style="font-size:13px">Nenhum resultado registrado ainda. No fim de cada rodada marque Ganhei, Perdi ou Empate e toque em Registrar rodada.</span>';return}
+  const W=hs.filter(h=>h.o==="w"||h.o==="bj").length, L=hs.filter(h=>h.o==="l").length, P=hs.filter(h=>h.o==="p").length;
+  const net=hs.reduce((s,h)=>s+profit(h.o,h.bet,h.d),0), hasBet=hs.some(h=>h.bet);
+  const grp=f=>{const g=hs.filter(f),w=g.filter(h=>h.o==="w"||h.o==="bj").length,l=g.filter(h=>h.o==="l").length;return{n:g.length,w,l,p:pct(w,w+l)}};
+  const fy=grp(h=>h.f), fn=grp(h=>!h.f);
+  const bar=(lb,g,cls="")=>`<div class="bar"><span class="lb">${lb}</span><span class="tr"><span class="fl ${cls}" style="width:${g.p??0}%"></span></span><span class="vl">${g.p===null?"—":g.p+"%"} <small style="opacity:.7">(${g.w}V/${g.l}D)</small></span></div>`;
+  let verdict="";
+  if(fy.w+fy.l>=10&&fn.w+fn.l>=5){const d=fy.p-fn.p;verdict=d>=5?`✅ Seguindo o programa você vence <b>${d} pontos percentuais a mais</b> do que quando não segue.`:d<=-5?`⚠️ Quando você <b>não</b> segue o programa está vencendo ${-d} pontos percentuais a mais. Vale rever as regras.`:"➖ Até agora não há diferença clara entre seguir ou não o programa."}
+  else verdict=`Para comparar com segurança, registre pelo menos 10 mãos seguindo e 5 sem seguir (agora: ${fy.w+fy.l} e ${fn.w+fn.l}, sem contar empates).`;
+  const last=hs.slice(-20);
+  el.innerHTML=`<div class="kpis">
+    <div class="kpi"><b>${hs.length}</b><span>Mãos jogadas</span></div>
+    <div class="kpi g"><b>${W}</b><span>Vitórias</span></div>
+    <div class="kpi r"><b>${L}</b><span>Derrotas</span></div>
+    <div class="kpi"><b>${pct(W,W+L)??"—"}${W+L?"%":""}</b><span>Taxa de vitória · ${P} empate(s)</span></div>
+  </div>
+  ${hasBet?`<div class="kpi ${net>=0?"g":"r"}" style="margin-top:8px"><b>${net>=0?"+":""}${net.toLocaleString("pt-BR")}</b><span>Saldo de fichas (rodadas com aposta preenchida)</span></div>`:""}
+  <div class="cmp"><h4>O programa está ajudando?</h4>
+    ${bar("Seguindo",fy)}${bar("Sem seguir",fn,"n")}
+    <div class="verd2">${verdict}</div></div>
+  <div class="cmp"><h4>Por situação do dealer</h4>
+    ${bar("Caso 1 (10, figura, Ás)",grp(h=>h.c===1))}${bar("Caso 2 (7, 8, 9)",grp(h=>h.c===2))}${bar("Caso 3 (2 a 6)",grp(h=>h.c===3))}
+  </div>
+  <div style="font-size:12px;color:#cfe3d6;margin-top:10px">Últimas ${last.length} mãos:</div>
+  <div class="seq">${last.map(h=>`<i class="${h.o}" title="${h.f?"seguiu":"não seguiu"}">${h.o==="l"?"D":h.o==="p"?"E":"V"}</i>`).join("")}</div>
+  <div style="font-size:11.5px;color:#9fbfac;margin-top:8px">Os dados ficam salvos neste navegador. Use "Copiar dados" para guardar uma cópia numa planilha.</div>`;
+}
+function copyCSV(){
+  const rows=[["data","caso_dealer","resultado_dealer","mao","resultado","seguiu","aposta","dobrou","saldo"]];
+  stats.forEach(r=>r.o.forEach((o,i)=>rows.push([new Date(r.t).toLocaleString("pt-BR"),r.c??"",r.r??"",i+1,{w:"vitoria",bj:"blackjack",p:"empate",l:"derrota"}[o],r.f?"sim":"nao",r.bet||"",r.d?"sim":"nao",profit(o,r.bet,r.d)])));
+  const csv=rows.map(r=>r.join(";")).join("\n");
+  try{navigator.clipboard.writeText(csv).then(()=>flash("Dados copiados! Cole numa planilha."),()=>flash("Não foi possível copiar neste navegador."))}catch(e){flash("Não foi possível copiar neste navegador.")}
+}
+function flash(t){$("regHint").textContent=t;const b=$("statsPanel");if(b.scrollIntoView)0}
+function resetStats(){
+  const b=$("resetStatsBtn");
+  if(!resetArm){resetArm=true;b.textContent="Toque de novo para confirmar";setTimeout(()=>{resetArm=false;b.textContent="Zerar"},3000);return}
+  resetArm=false;b.textContent="Zerar";stats=[];saveStats();renderStats();
+}
+
+function newRound(){
+  const oc=hands.map((h,i)=>autoOutcome(h,i).o).filter(Boolean);
+  if(!dealer&&!dealerRes&&!oc.length){$("regHint").textContent="Marque a carta do dealer, o resultado dele ou o seu resultado antes de registrar.";return}
+  if(dealer||dealerRes){rounds.push({c:dealer?caseOf(dealer):null,r:dealerRes,np:$("newPlayer").checked});rounds=rounds.slice(-15);save();}
+  if(oc.length){stats.push({t:Date.now(),c:dealer?caseOf(dealer):null,r:dealerRes,o:oc,f:followed,bet:+$("betIn").value||0,d:$("dbl").checked});saveStats();}
+  myBJ=false;setFollow(true);$("dbl").checked=false;
+  dealer=null;hands=[[]];active=0;splitEnd=-1;dealerExtra=[];dealerRes=null;$("newPlayer").checked=false;
+  $("regHint").textContent="Rodada registrada.";render();
+}
+
+function evaluate(){
+  const last=rounds.slice(-5), n=last.length;
+  if(n<3) return {cls:"",v:"Registre mais rodadas",why:[`Faltam ${3-n} rodada(s) para começar a avaliar a mesa.`]};
+  const withC=last.filter(h=>h.c!==null), bad=withC.filter(h=>h.c!==3).length;
+  const withR=last.filter(h=>h.r!==null), busts=withR.filter(h=>h.r==="Estourou").length, str=withR.filter(h=>strong(h.r)).length;
+  const why=[]; let trigger=false, warn=false;
+
+  if(withC.length>=4&&bad>=4){trigger=true;why.push(`O dealer abriu com 10/figura/Ás ou 7-8-9 em ${bad} das últimas ${withC.length} rodadas.`)}
+  else if(withC.length) why.push(`A carta aberta do dealer foi desfavorável em ${bad} de ${withC.length} rodadas.`);
+
+  if(withR.length>=4&&busts===0&&str>=3){trigger=true;why.push(`O dealer não estourou nenhuma vez e fechou com 19 ou mais em ${str} de ${withR.length} rodadas.`)}
+  else if(withR.length){why.push(`O dealer estourou ${busts}× e fechou forte (19+ ou BJ) ${str}× em ${withR.length} rodadas.`);
+    if(busts===0&&str>=2) warn=true}
+
+  const npIdx=rounds.map((h,i)=>h.np?i:-1).filter(i=>i>=0).pop();
+  if(npIdx!==undefined&&npIdx>=rounds.length-5){
+    const after=rounds.slice(npIdx).filter(h=>h.r!==null), aS=after.filter(h=>strong(h.r)).length, aB=after.filter(h=>h.r==="Estourou").length;
+    if(after.length>=2&&aB===0&&aS>=2){trigger=true;why.push("Depois que entrou um jogador novo, o dealer passou a fechar forte e não estourou mais.")}
+    else if(after.length) why.push("Entrou um jogador novo recentemente. Fique de olho nas próximas rodadas.");
+  }
+  const tail=rounds.slice(-3);
+  if(!trigger&&tail.length===3&&tail.every(h=>strong(h.r))){warn=true;why.push("O dealer fechou forte nas 3 últimas rodadas seguidas.")}
+
+  if(trigger){
+    if(swaps.mesa===0) return {cls:"v-go",v:"Troque de mesa 🔄",why};
+    if(swaps.servidor===0) return {cls:"v-go",v:"Troque de servidor 🌐",why:[...why,`Você já trocou de mesa ${swaps.mesa}× e o padrão continua.`]};
+    return {cls:"v-go",v:"Faça uma pausa ☕",why:[...why,"Você já trocou de mesa e de servidor. Descanse um pouco e volte depois."]};
+  }
+  if(warn) return {cls:"v-warn",v:"Atenção: pode piorar ⚠️",why:[...why,"Ainda não é hora de trocar, mas jogue com apostas baixas."]};
+  return {cls:"v-stay",v:busts>=2?"Mesa boa, fique ✅":"Pode continuar ✅",why};
+}
+
+function renderDealerHand(){
+  const h=$("dealerHand"), st=$("dealerStatus");
+  if(!dealerExtra.length){h.innerHTML="";st.innerHTML=dealer?`<span style="opacity:.8">Carta aberta: <b>${dealer}</b>. Adicione as próximas cartas do dealer.</span>`:'<span style="opacity:.8">Marque primeiro a carta aberta do dealer (passo 1).</span>';return}
+  const cards=dealer?[dealer,...dealerExtra]:dealerExtra;
+  h.innerHTML=cards.map((c,i)=>`<div class="pc" style="width:34px;height:46px;font-size:15px;${i===0&&dealer?"outline:3px solid var(--gold)":""}" ${i===0&&dealer?"":`onclick="dealerExtra.splice(${dealer?i-1:i},1);dealerRes=autoRes();render()" title="Remover"`}>${c}</div>`).join("");
+  if(!dealer){st.innerHTML="⚠️ Marque a carta aberta do dealer no passo 1 para calcular o total.";return}
+  const t=total(cards).t, r=autoRes();
+  st.innerHTML=`Total do dealer: <b>${t}</b> → `+(r==="Estourou"?'<b style="color:#5fd39a">Estourou! 💥</b>':r==="BJ"?'<b style="color:#ff8a8a">Blackjack</b>':r?`<b>parou em ${r}</b>`:"ainda precisa pedir carta (abaixo de 17)");
+}
+function renderHist(){
+  renderOutcome();renderStats();
+  document.querySelectorAll("#resKeys .key").forEach(b=>b.classList.toggle("sel",b.dataset.r===dealerRes));
+  $("hist").innerHTML=rounds.length?rounds.map(h=>`<div class="dot ${resClass(h.r)}${h.np?" np":""}" title="${h.np?"Jogador novo entrou":""}">${h.r===null?"—":h.r==="Estourou"?"💥":h.r}<small>${h.c?"C"+h.c:"?"}</small></div>`).join(""):'<span class="empty" style="font-size:12.5px">Nenhuma rodada registrada nesta mesa.</span>';
+  const e=evaluate(), el=$("verdict");
+  el.className="verdict "+e.cls;
+  const sw=(swaps.mesa||swaps.servidor)?`<div style="font-size:12px;color:#555;margin-top:6px">Trocas nesta sessão: ${swaps.mesa} de mesa · ${swaps.servidor} de servidor</div>`:"";
+  el.innerHTML=`<b class="v">${e.v}</b><ul>${e.why.map(w=>`<li>${w}</li>`).join("")}</ul>${sw}`;
+}
+function swap(t){swaps[t]++;if(t==="servidor"&&swaps.mesa===0)swaps.mesa=1;rounds=[];save();render()}
+function resetAll(){rounds=[];swaps={mesa:0,servidor:0};save();render()}
+
+const BETS=[1,2,3,5,10,20,50,100,200,500,1000];
+function renderBets(rec,limit){
+  $("betChips").innerHTML=BETS.map(b=>{
+    const cls=b===rec?"bchip rec":b<=limit?"bchip ok":"bchip no";
+    return `<span class="${cls}">${b.toLocaleString("pt-BR")}</span>`}).join("");
+}
+function calcBet(){
+  const c=+$("chips").value, m=$("maxBet"), n=$("betNote");
+  if(!c||c<0){m.textContent="—";n.textContent="Digite suas fichas para ver a aposta recomendada.";renderBets(null,0);return}
+  const limit=c/20;
+  const ok=BETS.filter(b=>b<=limit);
+  if(!ok.length){
+    m.textContent="1 ficha";renderBets(1,1);
+    n.textContent=`1/20 de ${c.toLocaleString("pt-BR")} dá ${limit.toFixed(1).replace(".",",")}, menos que a aposta mínima. Aposte 1 (o mínimo do jogo) com cuidado.`;return}
+  const rec=ok[ok.length-1];
+  m.textContent=rec.toLocaleString("pt-BR")+" fichas";renderBets(rec,limit);recBet=rec;$("betIn").value=rec;
+  let t=`1/20 de ${c.toLocaleString("pt-BR")} = ${(Math.floor(limit*10)/10).toLocaleString("pt-BR")}. A maior aposta permitida até esse limite é ${rec.toLocaleString("pt-BR")}.`;
+  if(rec>20) t+=" Em torneios, o ideal é ficar entre 10 e 20.";
+  n.textContent=t;
+}
+renderBets(null,0);
+render();
+</script>
+</body>
+</html>
