@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Assistente de Estratégia de Blackjack</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f5132">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Blackjack">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root{--felt:#0f5132;--felt2:#0b3d26;--gold:#c9a227;--ink:#14211b;--red:#b42323;--card:#fff}
@@ -197,11 +205,18 @@
   .cr-tag{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-size:14px;color:#cfe3d6}
   .tag{background:#fbfbf8;color:#1d2a12;font-weight:700;font-size:16px;padding:4px 14px;border-radius:99px;letter-spacing:.08em;user-select:all}
   .byline{margin:2px 0 4px;font:500 12.5px Fredoka,Inter,sans-serif;color:#fff7d1;opacity:.9}
+  .install{margin:8px 0 6px;font-size:14px;padding:7px 16px}
+  .ios-tip{margin:8px 0;background:#fbfbf8;color:#1d2a12;border-radius:14px;padding:10px 12px;font-size:13px;line-height:1.5}
+  .ios-tip .small{color:#1d2a12;border-color:#1d2a12;margin-left:6px}
+  .shr{display:inline-block;border:1.5px solid #1d2a12;border-radius:4px;padding:0 4px;font-size:11px}
+  @supports(padding:max(0px)){body{padding-top:env(safe-area-inset-top)}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>♠ Assistente de Estratégia de Blackjack</h1>
+  <button class="btn install" id="installBtn" onclick="installApp()" style="display:none">📲 Instalar app</button>
+  <div class="ios-tip" id="iosTip" style="display:none"><b>Instalar no iPhone:</b> toque em <b>Compartilhar</b> <span class="shr">⬆︎</span> no Safari e depois em <b>Adicionar à Tela de Início</b>. <button class="small" onclick="hideIos()">Ok</button></div>
   <p class="byline">por <b>ELIESIO SANTOS</b> · tag no jogo <b>e6mdi</b></p>
   <p class="sub">Toque na carta do dealer e nas suas cartas para ver a melhor jogada.</p>
   <details class="panel guide" id="guide">
@@ -539,6 +554,19 @@ function resetStats(){
 
 function copyTag(){const b=$("copyTag");
   try{navigator.clipboard.writeText("e6mdi").then(()=>{b.textContent="Copiada!";setTimeout(()=>b.textContent="Copiar tag",1800)},()=>{b.textContent="Selecione e copie"})}catch(e){b.textContent="Selecione e copie"}}
+/* ---------- App instalável (PWA) ---------- */
+let deferredPrompt=null;
+const standalone=()=>window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;if(!standalone())$("installBtn").style.display="inline-block"});
+window.addEventListener("appinstalled",()=>{$("installBtn").style.display="none";deferredPrompt=null});
+async function installApp(){if(!deferredPrompt)return;deferredPrompt.prompt();try{await deferredPrompt.userChoice}catch(e){}deferredPrompt=null;$("installBtn").style.display="none"}
+function hideIos(){$("iosTip").style.display="none";try{localStorage.setItem("bj_iostip","1")}catch(e){}}
+(function(){
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  let seen=false;try{seen=localStorage.getItem("bj_iostip")==="1"}catch(e){}
+  if(ios&&!standalone()&&!seen) $("iosTip").style.display="block";
+  try{if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")&&window.self===window.top) navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}
+})();
 function newRound(){
   const oc=hands.map((h,i)=>autoOutcome(h,i).o).filter(Boolean);
   if(!dealer&&!dealerRes&&!oc.length){$("regHint").textContent="Marque a carta do dealer, o resultado dele ou o seu resultado antes de registrar.";return}
