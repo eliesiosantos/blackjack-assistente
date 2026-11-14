@@ -210,11 +210,51 @@
   .ios-tip .small{color:#1d2a12;border-color:#1d2a12;margin-left:6px}
   .shr{display:inline-block;border:1.5px solid #1d2a12;border-radius:4px;padding:0 4px;font-size:11px}
   @supports(padding:max(0px)){body{padding-top:env(safe-area-inset-top)}}
+
+  /* ---- pop-up de troca ---- */
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px;animation:fadein .2s}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  .mbox{width:min(420px,100%);max-height:100%;overflow:auto;background:radial-gradient(circle at 50% 0,#ff6b6b,#b81d1d 75%);border:4px solid #fff;border-radius:24px;padding:18px 18px 14px;text-align:center;color:#fff;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes pop{from{transform:scale(.6)}to{transform:scale(1)}}
+  .micon{font-size:46px;line-height:1}
+  .mtitle{font:700 30px Fredoka,sans-serif;letter-spacing:.03em;margin:6px 0 8px;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+  .mwhy{text-align:left;font-size:13.5px;line-height:1.45;margin:0 0 14px;padding-left:18px}
+  .mbig{width:100%;font-size:18px;padding:12px}
+  .mlater{margin-top:10px;border-color:#fff;color:#fff}
+  .endbtn{margin-left:auto;color:#1d2a12;border-color:#1d2a12;background:transparent;white-space:nowrap;order:3}
+  /* ---- celular / tela dividida ---- */
+  @media (max-width:760px),(max-height:600px){
+    .wrap{padding:8px 10px 20px}
+    h1{font-size:17px;margin:0}
+    .sub,.byline,.hint-m,.install{display:none!important}
+    .ios-tip{font-size:12px;padding:6px 10px}
+    .guide{padding:8px 12px}
+    .guide summary{font-size:13px}
+    .panel{padding:10px;margin-bottom:10px;border-radius:16px;scroll-margin-top:6px}
+    .label{margin-bottom:6px;font-size:12px}
+    .keys{gap:5px}
+    .pcard{aspect-ratio:5/6}
+    .pc.pcard{width:44px;flex:0 0 44px;aspect-ratio:5/7}
+    .hand{min-height:0}
+    .result{padding:12px;scroll-margin-top:6px}
+    .gbtn{width:62px;height:62px;font-size:11px}.gbtn svg{width:21px;height:21px}
+    .gcap{display:none}
+    .result .action{font-size:21px;margin:6px 0 2px}
+    .result .why{font-size:12.5px}
+    .sticky{bottom:8px;padding:5px 8px 5px 5px}
+    .sticky b{font-size:17px}
+    .sticky span{font-size:11.5px}
+    body{padding-bottom:64px}
+  }
+  @media (max-height:600px){
+    .guide{display:none}
+    .pcard .gr{font-size:15px}.pcard .gs{font-size:18px}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>♠ Assistente de Estratégia de Blackjack</h1>
+  <h1 id="top">♠ Assistente de Estratégia de Blackjack</h1>
   <button class="btn install" id="installBtn" onclick="installApp()" style="display:none">📲 Instalar app</button>
   <div class="ios-tip" id="iosTip" style="display:none"><b>Instalar no iPhone:</b> toque em <b>Compartilhar</b> <span class="shr">⬆︎</span> no Safari e depois em <b>Adicionar à Tela de Início</b>. <button class="small" onclick="hideIos()">Ok</button></div>
   <p class="byline">por <b>ELIESIO SANTOS</b> · tag no jogo <b>e6mdi</b></p>
@@ -267,14 +307,14 @@
   </details>
 
 
-  <div class="panel">
+  <div class="panel" id="pDealer">
     <div class="label">1 · Carta aberta do dealer <button class="small" onclick="setDealer(null)">Limpar</button></div>
     <div class="keys" id="dealerKeys"></div>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="pPlayer">
     <div class="label">2 · Suas cartas <span><button class="small" onclick="undo()">Desfazer</button> <button class="small" onclick="clearHand()">Limpar</button></span></div>
-    <div style="font-size:12.5px;color:#cfe3d6;margin:-2px 0 8px">Toque nas 2 cartas que abriram para você. A cada carta nova que pedir, toque nela também.</div>
+    <div class="hint-m" style="font-size:12.5px;color:#cfe3d6;margin:-2px 0 8px">Toque nas 2 cartas que abriram para você. A cada carta nova que pedir, toque nela também.</div>
     <div class="keys" id="playerKeys"></div>
     <div style="height:10px"></div>
     <div class="htabs" id="handTabs"></div>
@@ -284,7 +324,7 @@
   <div class="label" style="font-size:13px;margin:0 0 6px 4px">3 · SUA DECISÃO</div>
   <div class="result" id="result"></div>
 
-  <div class="panel">
+  <div class="panel" id="pEnd">
     <div class="label">4 · Fim da rodada: controle de mesa</div>
     <div style="font-size:13px;color:#cfe3d6;margin-bottom:8px">Resultado final do dealer nesta rodada:</div>
     <div class="res" id="resKeys"></div>
@@ -347,7 +387,16 @@
       <button class="small" id="copyTag" onclick="copyTag()">Copiar tag</button></div>
   </footer>
 </div>
-<div class="sticky" id="sticky" onclick="document.getElementById('result').scrollIntoView({behavior:'smooth',block:'center'})"></div>
+<div class="sticky" id="sticky" onclick="goTo('result','center')"></div>
+<div class="modal" id="alertModal" role="alertdialog" aria-modal="true" aria-labelledby="alertTitle" style="display:none">
+  <div class="mbox" id="alertBox">
+    <div class="micon" id="alertIcon">🔄</div>
+    <div class="mtitle" id="alertTitle">TROQUE DE MESA</div>
+    <ul class="mwhy" id="alertWhy"></ul>
+    <button class="btn mbig" id="alertDo"></button>
+    <button class="small mlater" onclick="closeAlert()">Agora não</button>
+  </div>
+</div>
 
 <script>
 const $=id=>document.getElementById(id)||{style:{},classList:{toggle(){}},appendChild(){},set innerHTML(v){},set textContent(v){},checked:false,value:""};
@@ -369,7 +418,9 @@ mkKeys("dealerKeys",r=>setDealer(dealer===r?null:r));
 mkKeys("playerKeys",r=>{addCard(r)},1);
 
 let dealerExtra=[];
-function setDealer(r){dealer=r;if(dealerExtra.length)dealerRes=autoRes();render()}
+function setDealer(r){const had=dealer;dealer=r;if(dealerExtra.length)dealerRes=autoRes();render();if(r&&isMobile()&&!H().length)setTimeout(()=>goTo("pPlayer"),120)}
+const isMobile=()=>window.innerWidth<=760||window.innerHeight<=600;
+function goTo(id,block="start"){const el=document.getElementById(id);if(el&&el.scrollIntoView)el.scrollIntoView({behavior:"smooth",block})}
 function autoRes(){
   if(!dealer||!dealerExtra.length) return null;
   const cards=[dealer,...dealerExtra], t=total(cards).t;
@@ -459,7 +510,7 @@ function render(){
     +(a.split?`<button class="btn" style="margin-top:10px" onclick="doSplit()">Dividi as cartas ✂️</button>`:"")
     +(done?`<button class="btn" style="margin-top:10px;margin-left:6px" onclick="nextHand()">Ir para a Mão ${nxt+1} ▸</button>`:"");
   const st=$("sticky");
-  if(dealer&&hand.length){st.style.display="flex";st.className="sticky "+a.cls;st.innerHTML=`${BTN.filter(x=>x[3]===a.cls).map(([k])=>`<div class="gbtn ${k}">${ICON[k]}</div>`).join("")}<b>${a.act}</b><span>${hands.length>1?`Mão ${active+1}/${hands.length} · `:""}Dealer ${dealer} · você ${total(hand).t}</span>`}
+  if(dealer&&hand.length){st.style.display="flex";st.className="sticky "+a.cls;st.innerHTML=`<button class="small endbtn" onclick="event.stopPropagation();goTo('pEnd')">Fim da rodada ▸</button>${BTN.filter(x=>x[3]===a.cls).map(([k])=>`<div class="gbtn ${k}">${ICON[k]}</div>`).join("")}<b>${a.act}</b><span>${hands.length>1?`Mão ${active+1}/${hands.length} · `:""}Dealer ${dealer} · você ${total(hand).t}</span>`}
   else st.style.display="none";
   renderHist();
 }
@@ -575,7 +626,23 @@ function newRound(){
   myBJ=false;setFollow(true);$("dbl").checked=false;
   dealer=null;hands=[[]];active=0;splitEnd=-1;dealerExtra=[];dealerRes=null;$("newPlayer").checked=false;
   $("regHint").textContent="Rodada registrada.";render();
+  const ev=evaluate();
+  if(ev.cls==="v-go"&&alertKey!==ev.v){alertKey=ev.v;showAlert(ev)}
+  else if(isMobile()) setTimeout(()=>goTo("pDealer"),150);
 }
+let alertKey=null;
+function showAlert(ev){
+  const kind=/servidor/.test(ev.v)?"servidor":/pausa/.test(ev.v)?"pausa":"mesa";
+  $("alertIcon").textContent=kind==="mesa"?"🔄":kind==="servidor"?"🌐":"☕";
+  $("alertTitle").textContent=kind==="mesa"?"TROQUE DE MESA":kind==="servidor"?"TROQUE DE SERVIDOR":"FAÇA UMA PAUSA";
+  $("alertWhy").innerHTML=ev.why.map(w=>`<li>${w}</li>`).join("");
+  const b=$("alertDo");
+  b.textContent=kind==="mesa"?"Troquei de mesa ✔":kind==="servidor"?"Troquei de servidor ✔":"Vou pausar ✔";
+  b.onclick=()=>{closeAlert();if(kind==="pausa")resetAll();else swap(kind);goTo("pDealer")};
+  $("alertModal").style.display="flex";
+  try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
+}
+function closeAlert(){$("alertModal").style.display="none";if(isMobile())goTo("pDealer")}
 
 function evaluate(){
   const last=rounds.slice(-5), n=last.length;
@@ -627,8 +694,8 @@ function renderHist(){
   const sw=(swaps.mesa||swaps.servidor)?`<div style="font-size:12px;color:#555;margin-top:6px">Trocas nesta sessão: ${swaps.mesa} de mesa · ${swaps.servidor} de servidor</div>`:"";
   el.innerHTML=`<b class="v">${e.v}</b><ul>${e.why.map(w=>`<li>${w}</li>`).join("")}</ul>${sw}`;
 }
-function swap(t){swaps[t]++;if(t==="servidor"&&swaps.mesa===0)swaps.mesa=1;rounds=[];save();render()}
-function resetAll(){rounds=[];swaps={mesa:0,servidor:0};save();render()}
+function swap(t){alertKey=null;swaps[t]++;if(t==="servidor"&&swaps.mesa===0)swaps.mesa=1;rounds=[];save();render()}
+function resetAll(){alertKey=null;rounds=[];swaps={mesa:0,servidor:0};save();render()}
 
 const BETS=[1,2,3,5,10,20,50,100,200,500,1000];
 function renderBets(rec,limit){
